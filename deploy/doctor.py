@@ -65,11 +65,17 @@ def linux_hardware():
         values = dict(re.findall(r'^(\w+):\s+(\d+)', Path('/proc/meminfo').read_text(), re.M))
         cpuinfo = Path('/proc/cpuinfo').read_text()
         cpu = re.search(r'^model name\s*:\s*(.+)$', cpuinfo, re.M)
+        topology = read_json('lscpu', '-J') or {}
+        layout = {item['field'].rstrip(':'): item['data'] for item in topology.get('lscpu', [])
+                  if isinstance(item, dict) and 'field' in item and 'data' in item}
+        cores_per_socket = numeric(layout.get('Core(s) per socket'))
+        sockets = numeric(layout.get('Socket(s)'))
         names = run_read('lspci')
         adapters = [line.split(': ', 1)[-1] for line in names.splitlines()
                     if any(label in line for label in ('VGA compatible controller', '3D controller', 'Display controller'))] if names else None
         return {'ram_kib': values.get('MemTotal'), 'free_kib': values.get('MemAvailable'),
-                'cpu': cpu.group(1) if cpu else None, 'gpus': adapters}
+                'cpu': cpu.group(1) if cpu else layout.get('Model name'),
+                'cores': cores_per_socket * sockets if cores_per_socket and sockets else None, 'gpus': adapters}
     except OSError:
         return {}
 
