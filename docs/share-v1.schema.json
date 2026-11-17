@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Jingliu share card",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "title", "shot", "aspect"],
+  "properties": {
+    "schema": { "const": "jingliu.share.v1" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "shot": { "type": "string", "maxLength": 100 },
+    "aspect": { "enum": ["9:16", "16:9"] },
+    "prompt": { "type": "string", "maxLength": 8000 },
+    "public_url": { "type": "string", "format": "uri", "pattern": "^https://", "maxLength": 2500 },
+    "thumbnail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "source"],
+      "properties": {
+        "file": { "const": "jingliu-thumbnail.jpg" },
+        "source": { "enum": ["video_frame", "reference_frame"] }
+      }
+    }
+  }
+}

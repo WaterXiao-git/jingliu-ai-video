@@ -1,0 +1,24 @@
+name: Deployment checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  doctor:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -B -m unittest discover -s tests -v
+      - run: python -B deploy/doctor.py --json
+      - run: node --check studio/web/app.js
+      - run: node --check studio/web/onboarding.js

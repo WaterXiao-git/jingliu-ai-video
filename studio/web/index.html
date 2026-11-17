@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>镜流 · AI 短剧工作台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23b9a5ff'/%3E%3Cpath d='M14 28h36v24H14zM14 28l-3-9 36-7 3 9zM27 34l11 6-11 6z' stroke='%23161126' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+  <script defer src="/static/app.js"></script>
+  <script defer src="/static/onboarding.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <button class="brand" data-action="projects" aria-label="打开项目列表">
+        <span class="mark"><svg viewBox="0 0 24 24" fill="none"><path d="M4 8.5h16v11H4zM4 8.5l-1-4 16-3 1 4-16 3zM8 3.6l3 3.6m3-4.7 3 3.6M10 11.5l5 2.5-5 2.5v-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+        <span><strong>镜流</strong><small>AI 短剧工作台</small></span>
+      </button>
+      <div class="side-top"><span class="side-caption">工作区</span><button class="icon-btn" data-action="new" title="新建项目">＋</button></div>
+      <div id="project-switch"></div>
+      <nav id="nav" aria-label="制作流程"></nav>
+      <div class="side-foot"><span class="status-dot"></span><div><strong>本地工作区</strong><small>素材与成片保存在此电脑</small></div></div>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar">
+        <div id="breadcrumb"><span>工作区</span><span class="slash">/</span><strong>项目</strong></div>
+        <div class="top-actions"><span class="engine" id="engine-status"><span class="status-dot idle"></span>检查本地引擎</span><button class="button quiet small" data-page="jobs" id="queue-top">任务队列</button><button class="button quiet small" data-guide="open">新手引导</button></div>
+      </header>
+      <main id="content" tabindex="-1"><div class="loading">正在打开工作台…</div></main>
+    </div>
+  </div>
+  <dialog id="dialog"></dialog>
+  <aside id="onboarding" class="panel" aria-label="新手引导" hidden></aside>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
