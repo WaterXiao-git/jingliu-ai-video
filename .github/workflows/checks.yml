@@ -56,3 +56,4 @@ jobs:
             dist/SHA256SUMS.txt
             dist/build-info.json
             dist/self-test.json
+            dist/Jingliu-Windows-x64-*.zip

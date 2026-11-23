@@ -40,13 +40,13 @@ EXE 会记住上次选择的运行目录。再次双击时，已有部署会自�
 
 ## 开发者构建
 
-在 Windows 的项目根目录，用 Python 3.11 执行：
+先取得完整项目源码，在 Windows 的源码根目录用 Python 3.11 执行；不要在程序缓存目录中构建：
 
 ```powershell
 python -B desktop/build.py
 ```
 
-构建使用 Windows 自带的 C# 编译器，不下载 NuGet、Electron 或打包框架。产物为 dist/Jingliu.exe、SHA256SUMS.txt 和 build-info.json。EXE 启动不依赖构建机器上的 Python。
+构建使用 Windows 自带的 C# 编译器，不下载 NuGet、Electron 或打包框架。产物包括 dist/Jingliu.exe、含 EXE 和使用说明的便携 ZIP、SHA256SUMS.txt 和 build-info.json。EXE 启动不依赖构建机器上的 Python。从源码 ZIP 构建也不强制安装 Git，无法取得 Git 版本信息时会在构建记录中标记未知。构建前请关闭正在运行的 EXE 启动中心窗口。
 
 自动验收接口（不打开浏览器）：
 

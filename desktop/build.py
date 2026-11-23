@@ -47,6 +47,17 @@ def build_payload(destination, root=ROOT):
     return hashlib.sha256(destination.read_bytes()).hexdigest()
 
 
+def source_state(root=ROOT):
+    if not (root / '.git').exists():
+        return None, None
+    try:
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True, stderr=subprocess.DEVNULL).strip()
+        dirty = bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=root, text=True, stderr=subprocess.DEVNULL).strip())
+        return commit, dirty
+    except (OSError, subprocess.CalledProcessError):
+        return None, None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'dist')
@@ -89,11 +100,19 @@ def main():
                str(ROOT / 'desktop/Launcher.cs'), str(generated)]
     subprocess.run(command, check=True)
     checksum = hashlib.sha256(executable.read_bytes()).hexdigest()
-    (output / 'SHA256SUMS.txt').write_text(f'{checksum}  Jingliu.exe\n', encoding='ascii')
+    (output / 'Jingliu.exe.sha256').write_text(f'{checksum}  Jingliu.exe\n', encoding='ascii')
+    instructions = (ROOT / 'desktop/README-Windows.txt').read_text(encoding='utf-8')
+    (output / 'README-Windows.txt').write_text(instructions, encoding='utf-8-sig')
+    bundle = output / ('Jingliu-Windows-x64-' + VERSION + '.zip')
+    with ZipFile(bundle, 'w', compression=ZIP_DEFLATED) as archive:
+        for name in ('Jingliu.exe', 'Jingliu.exe.sha256', 'README-Windows.txt'):
+            archive.write(output / name, name)
+    bundle_hash = hashlib.sha256(bundle.read_bytes()).hexdigest()
+    (output / 'SHA256SUMS.txt').write_text(f'{checksum}  Jingliu.exe\n{bundle_hash}  {bundle.name}\n', encoding='ascii')
+    commit, dirty = source_state()
     result = {'version': VERSION, 'file': executable.name, 'bytes': executable.stat().st_size,
-              'sha256': checksum, 'payload_sha256': digest, 'source_commit': subprocess.check_output(
-                  ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-              'source_dirty': bool(subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT, text=True).strip())}
+              'sha256': checksum, 'payload_sha256': digest, 'source_commit': commit, 'source_dirty': dirty,
+              'bundle_file': bundle.name, 'bundle_bytes': bundle.stat().st_size, 'bundle_sha256': bundle_hash}
     (output / 'build-info.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
     print(json.dumps(result, indent=2))
 

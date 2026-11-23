@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,14 @@ spec.loader.exec_module(build)
 
 
 class DesktopDistribution(unittest.TestCase):
+    def test_zip_checkout_without_git_still_has_supported_build_metadata(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertEqual(build.source_state(root), (None, None))
+            (root / '.git').mkdir()
+            with patch.object(build.subprocess, 'check_output', side_effect=FileNotFoundError):
+                self.assertEqual(build.source_state(root), (None, None))
+
     def fixture(self, root):
         for name in build.FILES:
             file = root / name; file.parent.mkdir(parents=True, exist_ok=True); file.write_bytes(b'source')
