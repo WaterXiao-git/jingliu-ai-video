@@ -1,6 +1,6 @@
 ﻿[CmdletBinding()]
 param(
-    [ValidateSet('Menu', 'Check', 'Install', 'Start', 'Verify')]
+    [ValidateSet('Menu', 'Check', 'Plan', 'Install', 'Start', 'Verify')]
     [string] $Mode = 'Menu',
     [string] $Target,
     [string] $ReuseComfy,
@@ -8,6 +8,10 @@ param(
     [string] $Region,
     [switch] $WithOllama,
     [switch] $Video,
+    [switch] $AllowPythonBootstrap,
+    [string] $PlanFile,
+    [string] $Approve,
+    [switch] $NoStart,
     [int] $Port = 7861
 )
 $ErrorActionPreference = 'Stop'
@@ -117,7 +121,7 @@ function Install-PrivatePython {
         throw '目标目录里已有未完成的 Python 安装。请检查该目录或使用新的 -Target。'
     }
     Write-Host "将下载 Python 官方 NuGet 包（3.11.9 x64，约 18 MB），解压到 $destination"
-    if ((Read-Host '输入 YES 同意部署此独立 Python') -cne 'YES') { throw '已取消 Python 部署。' }
+    if (!$AllowPythonBootstrap -and (Read-Host '输入 YES 同意部署此独立 Python') -cne 'YES') { throw '已取消 Python 部署。' }
     New-Item -ItemType Directory -Path $downloads -Force | Out-Null
     if (!(Test-Path -LiteralPath $installer)) {
         $part = "$installer.part"
@@ -161,10 +165,14 @@ try {
     }
     $entry = Find-Python
     if (!$entry) {
-        if ($Mode -notin 'Check', 'Install') { throw '未找到 Python 3.11 x64。请先运行安装。' }
+        if ($Mode -notin 'Check', 'Plan', 'Install') { throw '未找到 Python 3.11 x64。请先运行安装。' }
         $suitable = Show-BootstrapCheck
         if ($Mode -eq 'Check') { Write-Host '这是 PowerShell 初检。安装时会执行更完整的 Doctor 检查。'; exit 0 }
         if (!$suitable) { exit 1 }
+        if ($Mode -eq 'Plan') {
+            if (!$AllowPythonBootstrap) { throw '生成安装计划需要 Python，请明确允许准备独立 Python 后重试。' }
+            $entry = Install-PrivatePython
+        }
     }
     if ($Mode -eq 'Install') {
         Write-Host "请阅读 MiniMax H3 社区许可：$($spec.license.url)"
@@ -181,15 +189,30 @@ try {
     if ($WithOllama) { $arguments += '--with-ollama' }
     if ($Region) { $arguments += @('--region', $Region) }
     switch ($Mode) {
+        Plan {
+            if (!$PlanFile) { throw '请指定安装计划输出文件 -PlanFile。' }
+            $planText = & $entry -B $tool plan @arguments --json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $planText = $planText -join [Environment]::NewLine
+            $null = $planText | ConvertFrom-Json
+            $planPath = [IO.Path]::GetFullPath($PlanFile)
+            New-Item -ItemType Directory -Path (Split-Path $planPath -Parent) -Force | Out-Null
+            [IO.File]::WriteAllText($planPath, $planText, [Text.UTF8Encoding]::new($false))
+            Write-Host "检测与安装计划已保存：$planPath"
+            exit 0
+        }
         Check {
             & $entry -B $tool plan @arguments
             exit $LASTEXITCODE
         }
         Install {
-            & $entry -B $tool install @arguments
+            $installArguments = @($arguments)
+            if ($Approve) { $installArguments += @('--approve', $Approve) }
+            & $entry -B $tool install @installArguments
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & $entry -B $tool verify --target $Target --video
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            if ($NoStart) { exit 0 }
             & (Join-Path $PSScriptRoot 'launch.ps1') -Target $Target
             exit $LASTEXITCODE
         }

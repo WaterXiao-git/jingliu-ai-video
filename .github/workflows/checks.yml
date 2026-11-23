@@ -37,3 +37,22 @@ jobs:
             [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $script), [ref]$tokens, [ref]$issues) | Out-Null
             if ($issues) { throw ($issues | Out-String) }
           }
+      - name: Build and inspect Windows EXE
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          python -B desktop/build.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $process = Start-Process -FilePath (Join-Path $PWD 'dist/Jingliu.exe') -ArgumentList "--self-test `"$PWD\dist\self-test.json`" --app-root `"$PWD\build\exe-smoke`"" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'EXE self-test failed' }
+          $result = Get-Content 'dist/self-test.json' -Raw | ConvertFrom-Json
+          if (!$result.zip_traversal_rejected -or !$result.required_files_present) { throw 'EXE payload checks failed' }
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: Jingliu-Windows-x64
+          path: |
+            dist/Jingliu.exe
+            dist/SHA256SUMS.txt
+            dist/build-info.json
+            dist/self-test.json

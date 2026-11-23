@@ -1,6 +1,7 @@
 ﻿param(
     [string]$Target = (Join-Path (Split-Path $PSScriptRoot -Parent) '.runtime'),
-    [switch]$Stop
+    [switch]$Stop,
+    [switch]$NoBrowser
 )
 $ErrorActionPreference = 'Stop'
 try {
@@ -15,9 +16,14 @@ try {
     if (!(Test-Path -LiteralPath $config.python)) { throw '找不到已部署的 Python，请重新运行部署检查。' }
     $arguments = "-B `"$PSScriptRoot\launcher.py`" --target `"$Target`""
     if ($Stop) { $arguments += ' --stop' }
+    if ($NoBrowser) { $arguments += ' --no-browser' }
     # No activation, package probing or model downloads on the daily launch path.
     Start-Process -FilePath $config.python -ArgumentList $arguments -WindowStyle Hidden -WorkingDirectory (Split-Path $PSScriptRoot -Parent)
 } catch {
+    if ($NoBrowser) {
+        Write-Error $_.Exception.Message -ErrorAction Continue
+        exit 1
+    }
     Add-Type -AssemblyName System.Windows.Forms
     [Windows.Forms.MessageBox]::Show($_.Exception.Message, '镜流启动失败') | Out-Null
     exit 1

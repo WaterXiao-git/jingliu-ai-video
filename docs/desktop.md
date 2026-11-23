@@ -1,0 +1,61 @@
+# Windows EXE 启动中心（预览版）
+
+双击 Jingliu.exe 即可打开原生启动中心。EXE 内置工作台程序与固定版本源码包，不内置数十 GB 模型，也不包含开发者的 Python、项目、配音或账户信息。无需先安装 Git、Node.js 或手动解压项目。
+
+当前支持 Windows 10 / 11 x64，使用系统 .NET Framework 4.8 或更新的 4.x（[微软说明](https://learn.microsoft.com/dotnet/framework/install/)）。完整本地视频生成仍需满足 NVIDIA 8GB 显存、16GB 内存及 CUDA 驱动条件；EXE 不会把低配置电脑变成可运行 H3 的机器。配置不足可在“帮助 / 在线方案”选择其他平台。
+
+## 首次使用
+
+1. 选择“模型与项目目录”。建议放在空间充足的数据盘；新装预留 35 GiB，带本地编剧预留 45 GiB。
+2. 有兼容 ComfyUI 时，可以填写复用目录。已有镜流部署可点“选择已有部署”，选中其 runtime.json。
+3. 核对实际地区代码和端口。需要时勾选本地编剧。
+4. 点“检测并准备计划”。首次缺少 Python 时，此步会从国内来源下载约 18 MB 官方 Python；还不会下载视频权重。查看检测结果、下载量和空间预算。
+5. 点“模型许可”阅读 H3 许可，确认地区、预算与计划后勾选同意，再点“确认并安装”。安装器会重新检查、校验资源，并验证真实短镜头、本地中文配音、字幕和成片导出。按页面日志等待完成。
+6. 点“打开工作台”，浏览器会在本地服务就绪后打开。跟随工作台中的新手引导制作第一条视频。
+
+“本地中文配音”需 Windows 已安装中文系统语音包；联网声线仍会标注“联网”。首次安装需联网下载国内资源，部署后使用本地声线可离线制作。
+
+## 日常使用
+
+EXE 会记住上次选择的运行目录。再次双击时，已有部署会自动打开工作台；按钮也可以手动启动。重复打开会复用已有服务。
+
+关闭 EXE 或浏览器后，生成仍在后台继续。等待任务完成后，点击“关闭后台”或桌面“关闭镜流”结束它管理的服务。安装过程中请等待操作完成再关闭启动中心。
+
+修改目录、地区、端口或编剧选项后，需要重新准备安装计划；旧计划不能直接复用。安装中断后，可在相同目录重新检查并继续，已校验的模型和可续传的下载会复用。
+
+## 文件位置与迁移
+
+- 模型、Python 环境和项目：你选择的运行目录。已有 ComfyUI 复用原路径。
+- 启动中心程序缓存：`%LOCALAPPDATA%\Jingliu\app\<版本内容编号>`，约几十 MB。
+- 启动中心日志和上次目录：`%LOCALAPPDATA%\Jingliu`。
+- 工作台日志：运行目录下的 launcher.log 和 studio.log。
+
+缓存目录按 EXE 内容区分，启动时校验完整性。换一个 EXE 不会自动搬迁、删除或覆盖旧模型与个人项目。移动已有部署需同时处理 runtime.json 中的绝对路径；只移动 EXE 不影响已选择的运行目录。
+
+## 验证范围与发布
+
+这是未签名的 Windows EXE 预览版，不是微软商店安装包。没有捆绑签名证书，也没有关闭系统安全功能。分发时请同时提供 SHA256SUMS.txt 供校验。
+
+本机完成打包与验收后，将在此文档补充实际结果。其他实体机器、干净 Windows 系统和不同显卡的完整部署仍需单独验收；Linux 和 macOS 暂不提供此 EXE。
+
+## 开发者构建
+
+在 Windows 的项目根目录，用 Python 3.11 执行：
+
+```powershell
+python -B desktop/build.py
+```
+
+构建使用 Windows 自带的 C# 编译器，不下载 NuGet、Electron 或打包框架。产物为 dist/Jingliu.exe、SHA256SUMS.txt 和 build-info.json。EXE 启动不依赖构建机器上的 Python。
+
+自动验收接口（不打开浏览器）：
+
+```powershell
+.\dist\Jingliu.exe --self-test .\dist\self-test.json
+.\dist\Jingliu.exe --start --no-browser --target "E:\JingliuRuntime"
+.\dist\Jingliu.exe --stop --target "E:\JingliuRuntime"
+```
+
+`--manage` 强制打开管理面板，跳过已部署环境的自动启动。测试可用 `--app-root` 指定独立的程序缓存目录；它只解包工作台代码，不复制模型或 Python 环境。
+
+自动化脚本需要等待 EXE 完成时，请使用 `Start-Process -Wait -PassThru` 并检查退出码，再读取报告文件。

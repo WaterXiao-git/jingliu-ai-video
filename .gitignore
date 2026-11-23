@@ -4,6 +4,8 @@
 /studio/data/
 /studio/runtime/
 /.venv/
+/dist/
+/build/
 __pycache__/
 *.py[cod]
 *.log

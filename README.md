@@ -70,6 +70,14 @@ Python 3.11.9 使用华为云镜像中的官方 NuGet 免安装包，普通 Pyth
 
 ## 快速开始
 
+### Windows EXE（预览版）
+
+希望少接触命令行时，可下载 [Windows EXE 预览版](https://github.com/WaterXiao-git/jingliu-ai-video/releases/tag/v0.1.5-preview.1) 中的 **Jingliu.exe**。单文件约 16 MB，包含工作台与部署程序，双击打开启动中心，无需预先安装 Git 或 Node.js。首次使用在界面中选择运行目录、检测配置并查看安装计划，确认许可后部署；已有部署可直接选中 `runtime.json` 接入。
+
+此 EXE 面向 Windows 10 / 11 x64，使用系统 .NET Framework 4.8 或更新的 4.x；视频生成仍需满足上面的显卡和内存要求。模型继续从清单中的国内来源下载，不包含在 EXE 中。已部署后再次双击，可自动打开上次使用的工作台。[EXE 使用说明、验证范围与构建方法](docs/desktop.md)
+
+EXE 为未签名预览版，其他实体机器仍需验收。源码下载和脚本入口继续可用。
+
 ### 下载项目
 
 从 [Gitee 主仓库](https://gitee.com/xiao-ming-jun/jingliu-ai-video) 的「克隆/下载」下载 ZIP，完整解压到有足够空间的磁盘。也可以在 PowerShell 中执行以下命令。
