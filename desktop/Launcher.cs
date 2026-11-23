@@ -33,6 +33,7 @@ namespace Jingliu {
             return result.Append('\\', slash * 2).Append('"').ToString();
         }
         internal static Dictionary<string, object> Read(string path) { return Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(path, Encoding.UTF8)); }
+        internal static string DisplayText(string path) { return File.ReadAllText(path, Encoding.UTF8).Replace("\r\n", "\n").Replace("\n", Environment.NewLine); }
         internal static string Hash(Stream stream) { using (var hash = SHA256.Create()) return BitConverter.ToString(hash.ComputeHash(stream)).Replace("-", "").ToLowerInvariant(); }
         internal static string FileHash(string path) { using (var stream = File.OpenRead(path)) return Hash(stream); }
         internal static string Inside(string root, string relative) {
@@ -315,6 +316,7 @@ namespace Jingliu {
             Process owned = currentProcess;
             if (!busy || owned == null || cancelled || owned.HasExited) return;
             if (MessageBox.Show(this, "停止本次检测或安装？未完成的验证会中断，已校验的模型和可续传文件会保留。", "停止当前操作", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (!busy || currentProcess != owned || owned.HasExited) return;
             cancelled = true; UpdateButtons();
             try {
                 int pid = owned.Id;
@@ -381,15 +383,17 @@ namespace Jingliu {
         void ShowLicense() {
             try {
                 using (var viewer = new Form { Text = "MiniMax H3 模型许可 · 完整原文", Size = new Size(830, 650), StartPosition = FormStartPosition.CenterParent, Font = Font }) {
-                    viewer.Controls.Add(new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical,
-                        Text = File.ReadAllText(Path.Combine(root, "docs", "MINIMAX-H3-LICENSE.txt"), Encoding.UTF8) });
+                    var text = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical,
+                        Text = Core.DisplayText(Path.Combine(root, "docs", "MINIMAX-H3-LICENSE.txt")) };
+                    viewer.Controls.Add(text); viewer.AutoScaleMode = AutoScaleMode.Dpi; viewer.AutoScaleDimensions = new SizeF(96F, 96F);
+                    viewer.Shown += delegate { text.SelectionStart = 0; text.SelectionLength = 0; };
                     viewer.ShowDialog(this);
                 }
             } catch (Exception error) { Append(error.Message); }
         }
         void Help() {
             var help = new Form { Text = "镜流 · 使用帮助与在线方案", Size = new Size(780, 590), StartPosition = FormStartPosition.CenterParent, Font = Font };
-            var text = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, Text = File.ReadAllText(Path.Combine(root, "docs", "desktop.md"), Encoding.UTF8) };
+            var text = new TextBox { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, Text = Core.DisplayText(Path.Combine(root, "docs", "desktop.md")) };
             var links = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 90, Padding = new Padding(10), AutoScroll = true };
             var platforms = Core.Read(Path.Combine(root, "deploy", "platforms.yaml"));
             foreach (Dictionary<string, object> item in (IEnumerable)platforms["platforms"]) {
@@ -398,7 +402,7 @@ namespace Jingliu {
                 link.LinkClicked += delegate { if (new Uri(url).Scheme == "https") Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); };
                 links.Controls.Add(link);
             }
-            help.Controls.Add(text); help.Controls.Add(links); help.ShowDialog(this);
+            help.Controls.Add(text); help.Controls.Add(links); help.AutoScaleMode = AutoScaleMode.Dpi; help.AutoScaleDimensions = new SizeF(96F, 96F); help.ShowDialog(this);
         }
     }
 
