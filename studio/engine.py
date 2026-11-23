@@ -117,7 +117,8 @@ class ComfyEngine:
             temp.mkdir(exist_ok=True)
             for directory in (self.input_dir, self.output_dir, self.user_dir):
                 directory.mkdir(parents=True, exist_ok=True)
-            env = dict(os.environ, TEMP=str(temp), TMP=str(temp), PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1')
+            env = dict(os.environ, TEMP=str(temp), TMP=str(temp), PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1',
+                       HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1')
             with (self.data / 'comfy.log').open('ab') as log:
                 self.process = subprocess.Popen(
                     [sys.executable, 'main.py', '--lowvram', '--fp16-vae', '--disable-pinned-memory', '--disable-auto-launch',

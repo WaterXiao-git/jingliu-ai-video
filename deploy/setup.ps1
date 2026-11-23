@@ -76,6 +76,38 @@ function Show-BootstrapCheck {
     return $true
 }
 
+function Download-Bootstrap([string] $Url, [string] $Destination) {
+    $uri = [Uri]$Url
+    for ($redirect = 0; $redirect -lt 10; $redirect++) {
+        $allowed = $spec.download_hosts | Where-Object { $uri.Host -eq $_ -or $uri.Host.EndsWith('.' + $_) }
+        if ($uri.Scheme -ne 'https' -or !$allowed) { throw "下载地址不在国内分发清单中：$($uri.Host)" }
+        @{event='request'; host=$uri.Host; path=$uri.AbsolutePath} | ConvertTo-Json -Compress |
+            Add-Content -LiteralPath (Join-Path $Target 'bootstrap-network.jsonl') -Encoding UTF8
+        $request = [Net.HttpWebRequest]::Create($uri)
+        $request.Proxy = $null
+        $request.AllowAutoRedirect = $false
+        $request.UserAgent = 'Jingliu-Installer/' + $spec.version
+        $request.Timeout = 60000
+        $response = $null
+        try {
+            $response = $request.GetResponse()
+            if ([int]$response.StatusCode -in 301,302,303,307,308) {
+                $uri = [Uri]::new($uri, $response.Headers['Location'])
+                continue
+            }
+            if ([int]$response.StatusCode -ne 200) { throw "Python 下载状态异常：$($response.StatusCode)" }
+            $inputStream = $response.GetResponseStream()
+            $outputStream = [IO.File]::Create($Destination)
+            try { $inputStream.CopyTo($outputStream) }
+            finally { $outputStream.Dispose(); $inputStream.Dispose() }
+            return
+        } finally {
+            if ($response) { $response.Dispose() }
+        }
+    }
+    throw 'Python 下载跳转次数过多。'
+}
+
 function Install-PrivatePython {
     $package = $spec.python_bootstrap
     $downloads = Join-Path $Target 'downloads'
@@ -89,7 +121,7 @@ function Install-PrivatePython {
     New-Item -ItemType Directory -Path $downloads -Force | Out-Null
     if (!(Test-Path -LiteralPath $installer)) {
         $part = "$installer.part"
-        Invoke-WebRequest -UseBasicParsing -Uri $package.url -OutFile $part
+        Download-Bootstrap $package.url $part
         if ((Get-FileHash -LiteralPath $part -Algorithm SHA256).Hash -ne $package.sha256) { throw 'Python 安装包校验失败。' }
         Move-Item -LiteralPath $part -Destination $installer
     }

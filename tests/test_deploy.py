@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'deploy'))
 import doctor
 import installer
+import network
 
 
 READY = {
@@ -93,7 +94,7 @@ class DeploymentFiles(unittest.TestCase):
             response = FakeDownload(self.raw[4:])
             response.status = 206
             response.headers = {'Content-Range': f'bytes 4-{len(self.raw)-1}/{len(self.raw)}'}
-            with patch.object(installer, 'urlopen', return_value=response) as request:
+            with patch.object(installer, 'open_resource', return_value=response) as request:
                 installer.download(self.item, path)
             self.assertEqual(request.call_args.args[0].get_header('Range'), 'bytes=4-')
             self.assertEqual(path.read_bytes(), self.raw)
@@ -102,16 +103,16 @@ class DeploymentFiles(unittest.TestCase):
     def test_interrupted_and_invalid_download_never_replace_good_file(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'model.safetensors'
-            with patch.object(installer, 'urlopen', side_effect=URLError('offline')):
+            with patch.object(installer, 'open_resource', side_effect=URLError('offline')):
                 with self.assertRaises(URLError):
                     installer.download(self.item, path)
             self.assertFalse(path.exists())
-            with patch.object(installer, 'urlopen', return_value=FakeDownload(b'X' * len(self.raw))):
+            with patch.object(installer, 'open_resource', return_value=FakeDownload(b'X' * len(self.raw))):
                 with self.assertRaisesRegex(RuntimeError, 'SHA-256'):
                     installer.download(self.item, path)
             self.assertFalse(path.exists())
             path.write_bytes(self.raw)
-            with patch.object(installer, 'urlopen', side_effect=AssertionError('must reuse')):
+            with patch.object(installer, 'open_resource', side_effect=AssertionError('must reuse')):
                 self.assertEqual(installer.download(self.item, path), path)
 
     def test_invalid_archive_never_creates_runtime_target(self):
@@ -138,7 +139,7 @@ class DeploymentFiles(unittest.TestCase):
                 installer.install_ollama_model(runtime, binary, log)
             weights = installer.SPEC['ollama']['weights']
             blob = runtime / 'ollama-models' / 'blobs' / ('sha256-' + weights['sha256'])
-            download.assert_called_once_with(weights, blob)
+            download.assert_called_once_with(weights, blob, network_log=runtime / 'download-network.jsonl')
             args = checked.call_args.args
             self.assertEqual(args[:3], (binary, 'create', 'qwen2.5:7b'))
             modelfile = args[4].read_text(encoding='utf-8')
@@ -152,7 +153,7 @@ class DeploymentFiles(unittest.TestCase):
         def respond(*args, **kwargs):
             return FakeDownload(b'')
 
-        with patch.object(doctor, 'urlopen', side_effect=respond) as request:
+        with patch.object(doctor, 'open_resource', side_effect=respond) as request:
             network = doctor.check_network()
         urls = {call.args[0].full_url for call in request.call_args_list}
         for item in doctor.SPEC['models'] + [doctor.SPEC['ollama']['weights']]:
@@ -163,6 +164,70 @@ class DeploymentFiles(unittest.TestCase):
         for item in doctor.SPEC['models']:
             self.assertIn(item['target'], rendered)
         self.assertIn('model:ollama-qwen2.5-7b', rendered)
+
+    def test_bundled_sources_copy_without_a_network_request(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'source.zip'
+            source.write_bytes(self.raw)
+            item = {**self.item, 'bundled': 'source.zip'}
+            destination = root / 'cache' / 'source.zip'
+            with patch.object(installer, 'ROOT', root), patch.object(installer, 'open_resource') as request:
+                installer.download(item, destination)
+            request.assert_not_called()
+            self.assertEqual(destination.read_bytes(), self.raw)
+            source.write_bytes(b'invalid source')
+            with patch.object(installer, 'ROOT', root):
+                with self.assertRaisesRegex(RuntimeError, '校验失败'):
+                    installer.download(item, root / 'other.zip')
+            self.assertFalse((root / 'other.zip').exists())
+
+    def test_approved_legacy_encoder_is_reused(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'encoder.safetensors'
+            legacy = b'approved legacy encoder'
+            item = {**self.item, 'compatible_files': [{'bytes': len(legacy), 'sha256': sha256(legacy).hexdigest()}]}
+            path.write_bytes(legacy)
+            self.assertTrue(installer.matches_size(path, item))
+            self.assertTrue(installer.valid_file(path, item))
+            with patch.object(installer, 'open_resource') as request:
+                installer.download(item, path)
+            request.assert_not_called()
+            path.write_bytes(b'X' * len(legacy))
+            self.assertFalse(installer.valid_file(path, item))
+
+
+class DomesticDistribution(unittest.TestCase):
+    def test_foreign_and_insecure_urls_are_rejected(self):
+        for url in ('https://huggingface.co/file', 'http://modelscope.cn/file', 'https://modelscope.cn.evil.test/file'):
+            with self.subTest(url=url), patch.object(network, 'build_opener') as opener:
+                with self.assertRaises(URLError):
+                    network.open_resource(url, hosts=installer.SPEC['download_hosts'])
+                opener.assert_not_called()
+        redirect = network.DistributionRedirect(installer.SPEC['download_hosts'], None)
+        with self.assertRaises(URLError):
+            redirect.redirect_request(None, None, 302, '', {}, 'https://huggingface.co/file')
+
+    def test_direct_download_records_the_host(self):
+        with TemporaryDirectory() as directory:
+            audit = Path(directory) / 'network.jsonl'
+            response = FakeDownload(b'example')
+            response.url = 'https://cdn-lfs-cn-1.modelscope.cn/file'
+            with patch.object(network, 'build_opener') as build:
+                build.return_value.open.return_value = response
+                with network.open_resource('https://modelscope.cn/file', hosts=installer.SPEC['download_hosts'], audit=audit):
+                    pass
+            self.assertEqual(build.call_args.args[0].proxies, {})
+            rows = [json.loads(line) for line in audit.read_text().splitlines()]
+            self.assertEqual([row['host'] for row in rows], ['modelscope.cn', 'cdn-lfs-cn-1.modelscope.cn'])
+
+    def test_manifest_is_complete_for_domestic_distribution(self):
+        spec = installer.SPEC
+        for item in spec['sources']:
+            self.assertTrue(installer.valid_file(installer.ROOT / item['bundled'], item), item['target'])
+        resources = spec['models'] + spec['ffmpeg']['files'] + [spec['python_bootstrap'], spec['ollama'], spec['ollama']['weights']]
+        for item in resources:
+            network.validate_url(item['url'], spec['download_hosts'])
 
 
 if __name__ == '__main__':

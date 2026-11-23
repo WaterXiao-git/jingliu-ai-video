@@ -1,5 +1,6 @@
 """Read-only check of the computer running this process."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import platform
@@ -10,6 +11,8 @@ import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from network import open_resource
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -205,19 +208,27 @@ def venv_python(venv):
 
 
 def check_network():
-    urls = {'pypi': SPEC['pypi']['index'] + '/aiohttp/', 'github': SPEC['sources'][0]['url'],
+    urls = {'pypi': SPEC['pypi']['index'] + '/aiohttp/', 'python': SPEC['python_bootstrap']['url'],
             'pytorch': SPEC['torch']['index'] + '/torch/'}
     urls.update({f"model:{item['target']}": item['url'] for item in SPEC['models']})
     urls['model:ollama-qwen2.5-7b'] = SPEC['ollama']['weights']['url']
-    results = {}
-    for name, url in urls.items():
+    urls['program:ollama'] = SPEC['ollama']['url']
+    urls.update({f"program:{item['target']}": item['url'] for item in SPEC['ffmpeg']['files']})
+
+    def probe(entry):
+        name, url = entry
         try:
-            with urlopen(Request(url, method='HEAD'), timeout=7) as response:
-                results[name] = response.status
+            with open_resource(Request(url, method='HEAD'), hosts=SPEC['download_hosts'], timeout=10) as response:
+                return name, response.status
         except HTTPError as error:
-            results[name] = error.code
+            return name, error.code
         except (URLError, OSError):
-            results[name] = None
+            return name, None
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        results = dict(pool.map(probe, urls.items()))
+    results.update({f"source:{item['target']}": '项目包内' if (ROOT / item['bundled']).is_file() else '源码包缺失'
+                    for item in SPEC['sources']})
     return results
 
 

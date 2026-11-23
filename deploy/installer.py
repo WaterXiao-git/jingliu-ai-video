@@ -16,6 +16,7 @@ from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 from doctor import GIB, ROOT, SPEC, detect, evaluate, markdown, media_support, python_packages, venv_python
+from network import open_resource
 
 
 DEFAULT_TARGET = ROOT / '.runtime'
@@ -33,11 +34,16 @@ def sha(path):
 
 
 def matches_size(path, item):
-    return path.is_file() and path.stat().st_size == item['bytes']
+    return path.is_file() and any(path.stat().st_size == version['bytes']
+                                  for version in [item, *item.get('compatible_files', [])])
 
 
 def valid_file(path, item):
-    return matches_size(path, item) and sha(path) == item['sha256']
+    if not path.is_file():
+        return False
+    size = path.stat().st_size
+    expected = {version['sha256'] for version in [item, *item.get('compatible_files', [])] if size == version['bytes']}
+    return bool(expected) and sha(path) in expected
 
 
 def write_json(path, value):
@@ -55,7 +61,7 @@ def checked(*command, env=None, cwd=None, log=None):
                            (f' 详情见本地日志 {log}。' if log else ''))
 
 
-def download(item, destination, allow_replace=False):
+def download(item, destination, allow_replace=False, *, network_log=None):
     if destination.exists():
         if valid_file(destination, item):
             print(f'已校验，复用 {destination.name}', flush=True)
@@ -65,6 +71,16 @@ def download(item, destination, allow_replace=False):
         destination.unlink()
     destination.parent.mkdir(parents=True, exist_ok=True)
     part = destination.with_suffix(destination.suffix + '.part')
+    if item.get('bundled'):
+        source = (ROOT / item['bundled']).resolve()
+        if not source.is_relative_to(ROOT.resolve()) or not valid_file(source, item):
+            raise RuntimeError(f'项目内源码包缺失或校验失败: {item["bundled"]}。请完整解压项目后重试。')
+        shutil.copyfile(source, part)
+        if not valid_file(part, item):
+            raise RuntimeError(f'{destination.name} 本地复制校验失败。')
+        part.replace(destination)
+        print(f'从项目包内复制已校验源码 {destination.name}', flush=True)
+        return destination
     position = part.stat().st_size if part.exists() else 0
     if position == item['bytes'] and valid_file(part, item):
         part.replace(destination)
@@ -79,7 +95,7 @@ def download(item, destination, allow_replace=False):
     if position:
         headers['Range'] = f'bytes={position}-'
     print(f'下载 {destination.name} · 约 {need / 1e9:.2f} GB 待接收', flush=True)
-    with urlopen(Request(item['url'], headers=headers), timeout=60) as response:
+    with open_resource(Request(item['url'], headers=headers), hosts=SPEC['download_hosts'], audit=network_log) as response:
         if not response.url.startswith('https://'):
             raise RuntimeError('下载地址跳转到了非 HTTPS。')
         if position and response.status == 206:
@@ -213,7 +229,7 @@ def prepare_plan(args):
     if ffmpeg is None:
         download_bytes += SPEC['ffmpeg']['bytes']
     if not reuse:
-        download_bytes += sum(item['bytes'] for item in SPEC['sources'])
+        download_bytes += sum(item['bytes'] for item in SPEC['sources'] if not item.get('bundled'))
     if args.with_ollama:
         download_bytes += SPEC['ollama']['bytes'] + SPEC['ollama']['weights']['bytes']
     return {
@@ -285,7 +301,8 @@ def install_locked(args, plan, runtime):
     scratch = runtime / 'tmp'
     scratch.mkdir(exist_ok=True)
     env = dict(os.environ, TEMP=str(scratch), TMP=str(scratch), TMPDIR=str(scratch), PYTHONUTF8='1',
-               PIP_CONFIG_FILE=os.devnull, PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1')
+               PIP_CONFIG_FILE=os.devnull, PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
+               NO_PROXY='*', HTTP_PROXY='', HTTPS_PROXY='', ALL_PROXY='')
     if args.reuse_comfy:
         comfy = args.reuse_comfy.resolve()
         python = venv_python(comfy / '.venv')
@@ -303,7 +320,7 @@ def install_locked(args, plan, runtime):
             marker = destination / '.jingliu-source.json'
             if marker.is_file() and json.loads(marker.read_text(encoding='utf-8')).get('sha256') == item['sha256']:
                 continue
-            archive = download(item, cache / (destination.name + '.zip'), allow_replace=True)
+            archive = download(item, cache / (destination.name + '.zip'), allow_replace=True, network_log=runtime / 'download-network.jsonl')
             extract_archive(archive, destination, item, strip_root=True)
             archive.unlink()
         venv = runtime / 'venv'
@@ -313,7 +330,7 @@ def install_locked(args, plan, runtime):
             raise RuntimeError('请用 64 位 Python 3.11 启动安装器。')
         if not python.is_file() or not (venv / 'pyvenv.cfg').is_file():
             checked(sys.executable, '-m', 'venv', venv, env=env, log=log)
-        pip = [python, '-m', 'pip', '--isolated', '--disable-pip-version-check']
+        pip = [python, '-m', 'pip', '--isolated', '--disable-pip-version-check', '--log', runtime / 'pip-network.log']
         flags = ['install', '--no-cache-dir', '--only-binary=:all:', '--no-deps']
         lock = ROOT / SPEC['python_lock']
         torch_names = ['torch', 'torchvision', 'torchaudio']
@@ -328,13 +345,11 @@ def install_locked(args, plan, runtime):
         checked(*pip, 'check', env=env, log=log)
         assert_packages(python, log)
         for item in SPEC['models']:
-            download(item, comfy / 'models' / item['target'])
+            download(item, comfy / 'models' / item['target'], network_log=runtime / 'download-network.jsonl')
     location = plan['ffmpeg_dir']
-    if location is None:
-        item = SPEC['ffmpeg']
-        archive = download(item, cache / 'ffmpeg.zip', allow_replace=True)
-        extract_archive(archive, runtime / 'ffmpeg', item, only={'ffmpeg.exe', 'ffprobe.exe'})
-        archive.unlink()
+    if location is None or location == str(runtime / 'ffmpeg'):
+        for item in SPEC['ffmpeg']['files']:
+            download(item, runtime / 'ffmpeg' / item['target'], network_log=runtime / 'download-network.jsonl')
         location = str(runtime / 'ffmpeg')
     ollama_binary = None
     if args.with_ollama:
@@ -342,7 +357,7 @@ def install_locked(args, plan, runtime):
         item = SPEC['ollama']
         marker = ollama_binary.parent / '.jingliu-source.json'
         if not marker.is_file() or not ollama_binary.is_file() or json.loads(marker.read_text(encoding='utf-8')).get('sha256') != item['sha256']:
-            archive = download(item, cache / 'ollama.zip', allow_replace=True)
+            archive = download(item, cache / 'ollama.zip', allow_replace=True, network_log=runtime / 'download-network.jsonl')
             extract_archive(archive, ollama_binary.parent, item)
             archive.unlink()
         with start_ollama(runtime, str(ollama_binary)):
@@ -406,7 +421,7 @@ def install_ollama_model(runtime, binary, log):
     # Download into Ollama's content-addressed store so import reuses the same bytes.
     env = ollama_environment(runtime)
     blob = Path(env['OLLAMA_MODELS']) / 'blobs' / ('sha256-' + weights['sha256'])
-    download(weights, blob)
+    download(weights, blob, network_log=runtime / 'download-network.jsonl')
     template = (ROOT / item['modelfile']).read_text(encoding='utf-8')
     modelfile = runtime / 'qwen2.5.Modelfile'
     modelfile.write_text(template.replace('__MODEL_PATH__', blob.as_posix()), encoding='utf-8')

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "镜流 · AI 短剧工作台",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "repository": "https://gitee.com/xiao-ming-jun/jingliu-ai-video",
   "platform": {
     "os": "Windows",
@@ -43,25 +43,31 @@
       "target": "ComfyUI",
       "revision": "783ab7282af1d470258615c5e4962868aa643afb",
       "license": "GPL-3.0",
-      "url": "https://codeload.github.com/Comfy-Org/ComfyUI/zip/783ab7282af1d470258615c5e4962868aa643afb",
+      "url": "https://gitee.com/xiao-ming-jun/jingliu-ai-video/raw/main/deploy/vendor/ComfyUI-783ab7282af1.zip",
       "bytes": 13634664,
-      "sha256": "767dab2c8dc296349c5fc5e7d97580ec8cca27ffb4cf63572d07769000f1c25d"
+      "sha256": "767dab2c8dc296349c5fc5e7d97580ec8cca27ffb4cf63572d07769000f1c25d",
+      "upstream_url": "https://codeload.github.com/Comfy-Org/ComfyUI/zip/783ab7282af1d470258615c5e4962868aa643afb",
+      "bundled": "deploy/vendor/ComfyUI-783ab7282af1.zip"
     },
     {
       "target": "ComfyUI/custom_nodes/ComfyUI-ClipProj",
       "revision": "c01ba8fb8f41b4f2094dbd0b185cdc238fb6134c",
       "license": "MIT",
-      "url": "https://codeload.github.com/nicolab28/ComfyUI-ClipProj/zip/c01ba8fb8f41b4f2094dbd0b185cdc238fb6134c",
+      "url": "https://gitee.com/xiao-ming-jun/jingliu-ai-video/raw/main/deploy/vendor/ComfyUI-ClipProj-c01ba8fb8f41.zip",
       "bytes": 1582000,
-      "sha256": "5db98923f741bafd1beb56649df23a0f7981055ab482b3c34da9778083e995df"
+      "sha256": "5db98923f741bafd1beb56649df23a0f7981055ab482b3c34da9778083e995df",
+      "upstream_url": "https://codeload.github.com/nicolab28/ComfyUI-ClipProj/zip/c01ba8fb8f41b4f2094dbd0b185cdc238fb6134c",
+      "bundled": "deploy/vendor/ComfyUI-ClipProj-c01ba8fb8f41.zip"
     },
     {
       "target": "ComfyUI/custom_nodes/ComfyUI-Spectrum-MiniMax-H3",
       "revision": "806fe498d574a726fecb8818917f00a4b993fd77",
       "license": "GPL-3.0",
-      "url": "https://codeload.github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3/zip/806fe498d574a726fecb8818917f00a4b993fd77",
+      "url": "https://gitee.com/xiao-ming-jun/jingliu-ai-video/raw/main/deploy/vendor/ComfyUI-Spectrum-MiniMax-H3-806fe498d574.zip",
       "bytes": 636346,
-      "sha256": "949eb9410fd1dfcf812843af2c92bcdc81a7732cc30c60c9f8b4e244b106684f"
+      "sha256": "949eb9410fd1dfcf812843af2c92bcdc81a7732cc30c60c9f8b4e244b106684f",
+      "upstream_url": "https://codeload.github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3/zip/806fe498d574a726fecb8818917f00a4b993fd77",
+      "bundled": "deploy/vendor/ComfyUI-Spectrum-MiniMax-H3-806fe498d574.zip"
     }
   ],
   "models": [
@@ -77,13 +83,20 @@
     },
     {
       "target": "text_encoders/qwen3vl_4b_int8_convrot.safetensors",
-      "revision": "d9449494156acb47a84c68777d78bd8d9d5df97d",
+      "revision": "6429eb26b4a54adcd5e2c11e36baafaba718fba7",
       "license": "Qwen3-VL upstream Apache-2.0; see conversion model card",
-      "url": "https://hf-mirror.com/Stick9190/qwen3vl_4b_int8_convrot/resolve/d9449494156acb47a84c68777d78bd8d9d5df97d/qwen3vl_4b_int8_convrot.safetensors",
-      "bytes": 5374169456,
-      "sha256": "ebbb3efdf4a6e1b766e32f6dc4fa92af9530edede0968c070b3e604aeca413aa",
-      "upstream_url": "https://huggingface.co/Stick9190/qwen3vl_4b_int8_convrot/resolve/d9449494156acb47a84c68777d78bd8d9d5df97d/qwen3vl_4b_int8_convrot.safetensors",
-      "upstream_revision": "d9449494156acb47a84c68777d78bd8d9d5df97d"
+      "url": "https://modelscope.cn/models/Comfy-Org/Krea-2/resolve/6429eb26b4a54adcd5e2c11e36baafaba718fba7/text_encoders/qwen3vl_4b_int8_convrot.safetensors",
+      "bytes": 4858559240,
+      "sha256": "32de113cbf8282b02cbff0794b637b9d6676da09314a1db5a30bcea9bf4ee01c",
+      "upstream_url": "https://huggingface.co/Comfy-Org/Krea-2",
+      "compatible_files": [
+        {
+          "bytes": 5374169456,
+          "sha256": "ebbb3efdf4a6e1b766e32f6dc4fa92af9530edede0968c070b3e604aeca413aa",
+          "upstream_url": "https://huggingface.co/Stick9190/qwen3vl_4b_int8_convrot/resolve/d9449494156acb47a84c68777d78bd8d9d5df97d/qwen3vl_4b_int8_convrot.safetensors",
+          "upstream_revision": "d9449494156acb47a84c68777d78bd8d9d5df97d"
+        }
+      ]
     },
     {
       "target": "vae/minimax_h3_video_vae_int8_convrot.safetensors",
@@ -117,14 +130,45 @@
     }
   ],
   "ffmpeg": {
-    "url": "https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-essentials_build.zip",
-    "bytes": 106259850,
-    "sha256": "e2aaeaa0fdbc397d4794828086424d4aaa2102cef1fb6874f6ffd29c0b88b673"
+    "version": "8.0.1",
+    "bytes": 198406500,
+    "license": "GPL-3.0",
+    "upstream_archive": {
+      "url": "https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-essentials_build.zip",
+      "bytes": 106259850,
+      "sha256": "e2aaeaa0fdbc397d4794828086424d4aaa2102cef1fb6874f6ffd29c0b88b673"
+    },
+    "files": [
+      {
+        "target": "ffmpeg.exe",
+        "url": "https://modelscope.cn/models/BeePlug/LittleHornet-FFmpeg8.0.1-CLI-Win-x64/resolve/9b90dc8361cc8385fbed4b21eb150eabc0156b44/ffmpeg.exe",
+        "bytes": 99264000,
+        "sha256": "5af82a0d4fe2b9eae211b967332ea97edfc51c6b328ca35b827e73eac560dc0d"
+      },
+      {
+        "target": "ffprobe.exe",
+        "url": "https://modelscope.cn/models/BeePlug/LittleHornet-FFmpeg8.0.1-CLI-Win-x64/resolve/9b90dc8361cc8385fbed4b21eb150eabc0156b44/ffprobe.exe",
+        "bytes": 99066368,
+        "sha256": "192a1d6899059765ac8c39764fc3148d4e6049955956dc2029f81f4bd6a8972d"
+      },
+      {
+        "target": "licenses/LICENSE-GPLv3.txt",
+        "url": "https://modelscope.cn/models/BeePlug/LittleHornet-FFmpeg8.0.1-CLI-Win-x64/resolve/9b90dc8361cc8385fbed4b21eb150eabc0156b44/LICENSE-GPLv3.txt",
+        "bytes": 35147,
+        "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+      },
+      {
+        "target": "licenses/UPSTREAM-README.txt",
+        "url": "https://modelscope.cn/models/BeePlug/LittleHornet-FFmpeg8.0.1-CLI-Win-x64/resolve/9b90dc8361cc8385fbed4b21eb150eabc0156b44/UPSTREAM-README.txt",
+        "bytes": 40985,
+        "sha256": "a0e976df3cf1d781264c41db8ee3421978c1278be92ed00edbc96337529670be"
+      }
+    ]
   },
   "ollama": {
-    "url": "https://github.com/ollama/ollama/releases/download/v0.40.16/ollama-windows-amd64.zip",
-    "bytes": 1618244995,
-    "sha256": "50fcf5ad54277f2fa5d173ebfc93bcb017adbc0c9ef2314daabc96ca9e6aa64e",
+    "url": "https://cnb.cool/hex/ollama/-/releases/download/v0.33.3/ollama-windows-amd64.zip",
+    "bytes": 1469175900,
+    "sha256": "52cb36a62e7e501f61514f60212dec7117b6c098811357585e02fffe32d2fcd7",
     "model": "qwen2.5:7b",
     "modelfile": "deploy/qwen2.5.Modelfile",
     "weights": {
@@ -134,7 +178,9 @@
       "sha256": "65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423",
       "license": "Apache-2.0",
       "upstream_url": "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF"
-    }
+    },
+    "version": "0.33.3",
+    "upstream_url": "https://github.com/ollama/ollama/releases/download/v0.33.3/ollama-windows-amd64.zip"
   },
   "license": {
     "url": "https://gitee.com/xiao-ming-jun/jingliu-ai-video/blob/main/docs/MINIMAX-H3-LICENSE.txt",
@@ -189,5 +235,14 @@
   "pypi": {
     "index": "https://mirrors.aliyun.com/pypi/simple",
     "upstream_index": "https://pypi.org/simple"
-  }
+  },
+  "download_hosts": [
+    "gitee.com",
+    "modelscope.cn",
+    "mirrors.huaweicloud.com",
+    "mirrors.aliyun.com",
+    "mirror.sjtu.edu.cn",
+    "s3.jcloud.sjtu.edu.cn",
+    "cnb.cool"
+  ]
 }
