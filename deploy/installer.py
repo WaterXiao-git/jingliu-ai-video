@@ -215,7 +215,7 @@ def prepare_plan(args):
     if not reuse:
         download_bytes += sum(item['bytes'] for item in SPEC['sources'])
     if args.with_ollama:
-        download_bytes += SPEC['ollama']['bytes'] + SPEC['ollama']['model_bytes_estimate']
+        download_bytes += SPEC['ollama']['bytes'] + SPEC['ollama']['weights']['bytes']
     return {
         **identity, 'approval': hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12],
         'report': report, 'known_download_bytes_baseline': download_bytes,
@@ -346,7 +346,7 @@ def install_locked(args, plan, runtime):
             extract_archive(archive, ollama_binary.parent, item)
             archive.unlink()
         with start_ollama(runtime, str(ollama_binary)):
-            checked(ollama_binary, 'pull', item['model'], env=ollama_environment(runtime), log=log)
+            install_ollama_model(runtime, ollama_binary, log)
     config = {'comfy': str(comfy), 'python': str(python), 'ffmpeg_dir': location,
               'ollama_binary': str(ollama_binary) if ollama_binary else None,
               'region': args.region, 'version': SPEC['version'],
@@ -400,11 +400,24 @@ def stop_owned(process):
             process.wait(timeout=10)
 
 
+def install_ollama_model(runtime, binary, log):
+    item = SPEC['ollama']
+    weights = item['weights']
+    # Download into Ollama's content-addressed store so import reuses the same bytes.
+    env = ollama_environment(runtime)
+    blob = Path(env['OLLAMA_MODELS']) / 'blobs' / ('sha256-' + weights['sha256'])
+    download(weights, blob)
+    template = (ROOT / item['modelfile']).read_text(encoding='utf-8')
+    modelfile = runtime / 'qwen2.5.Modelfile'
+    modelfile.write_text(template.replace('__MODEL_PATH__', blob.as_posix()), encoding='utf-8')
+    checked(binary, 'create', item['model'], '-f', modelfile, env=env, log=log)
+
+
 def ollama_environment(runtime):
     model_dir = runtime / 'ollama-models'
     model_dir.mkdir(exist_ok=True)
     return dict(os.environ, OLLAMA_HOST=f"{LOCAL}:{SPEC['ports']['ollama']}",
-                OLLAMA_MODELS=str(model_dir), OLLAMA_NO_CLOUD='1', OLLAMA_KEEP_ALIVE='0')
+                OLLAMA_MODELS=str(model_dir), OLLAMA_NO_CLOUD='1', OLLAMA_KEEP_ALIVE='0', OLLAMA_NOPRUNE='1')
 
 
 @contextlib.contextmanager

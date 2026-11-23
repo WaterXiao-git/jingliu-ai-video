@@ -7,8 +7,8 @@
 <p align="center">在自己的电脑上，把剧本、角色参考图和分镜制作成 AI 短剧。</p>
 
 <p align="center">
-  <a href="https://github.com/WaterXiao-git/jingliu-ai-video/releases"><img src="https://img.shields.io/github/v/release/WaterXiao-git/jingliu-ai-video?color=8062DE" alt="最新版本"></a>
-  <a href="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml"><img src="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml/badge.svg" alt="Deployment checks"></a>
+  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/tags"><img src="https://img.shields.io/badge/version-0.1.2-8062DE" alt="版本 0.1.2"></a>
+  <a href="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml"><img src="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml/badge.svg" alt="GitHub 自动检查"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6FE3B7" alt="应用源码 MIT 许可"></a>
 </p>
 
@@ -18,7 +18,7 @@
   <a href="#制作自己的短剧">使用教程</a> ·
   <a href="#交给-agent-部署">Agent 部署</a> ·
   <a href="#常见问题">常见问题</a> ·
-  <a href="https://github.com/WaterXiao-git/jingliu-ai-video/discussions">社区交流</a>
+  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/issues">社区交流</a>
 </p>
 
 ## 你可以用镜流做什么
@@ -57,16 +57,24 @@
 
 Doctor 支持在 Windows、Linux 和 macOS 上做只读检测。Linux、macOS 的一键部署仍待实机验收。配置不足或平台暂未支持时，检测报告会给出其他生成平台的选项。[检测规则与安装说明](docs/installation.md)
 
+## 模型下载来源
+
+视频主模型、视频 VAE、音频 VAE、ClipProj 和可选的 Qwen2.5 7B 编剧权重从 **魔搭 ModelScope** 下载。文字编码器通过 **HF-Mirror** 下载。安装器校验文件大小和 SHA-256，并复用校验通过的已有文件。
+
+HF-Mirror 的文件请求可能跳转到 Hugging Face 的境外 CDN。本机已通过免代理的分段读取测试，其他运营商的连通性需以本机检测为准。安装器使用 HTTPS 和固定校验值验证下载内容。[逐项来源与验证方式](docs/installation.md#模型来源与校验)
+
 ## 快速开始
 
 ### 下载项目
 
-[下载当前源码 ZIP](https://github.com/WaterXiao-git/jingliu-ai-video/archive/refs/heads/main.zip)，完整解压到有足够空间的磁盘。也可以在 PowerShell 中执行以下命令。
+从 [Gitee 主仓库](https://gitee.com/xiao-ming-jun/jingliu-ai-video) 的「克隆/下载」下载 ZIP，完整解压到有足够空间的磁盘。也可以在 PowerShell 中执行以下命令。
 
 ~~~powershell
-git clone https://github.com/WaterXiao-git/jingliu-ai-video.git
+git clone https://gitee.com/xiao-ming-jun/jingliu-ai-video.git
 cd jingliu-ai-video
 ~~~
+
+[GitHub 镜像](https://github.com/WaterXiao-git/jingliu-ai-video) 提供同一版本的代码与自动检查记录。
 
 ### 检查并安装
 
@@ -203,7 +211,7 @@ Subtle body movement, soft blue ambient light, consistent character appearance.
 
 将仓库链接和下面的任务发给具备本机终端权限的 Agent。
 
-> 请拉取 https://github.com/WaterXiao-git/jingliu-ai-video ，阅读仓库中的 ai-video-deployer Skill。先做只读硬件与磁盘检查，给出安装位置、下载预算、可复用环境和配置差距。等我确认计划后，执行安装和真实视频验证，最后打开工作台并教我完成示例项目。
+> 请拉取 https://gitee.com/xiao-ming-jun/jingliu-ai-video ，阅读仓库中的 ai-video-deployer Skill。先做只读硬件与磁盘检查，并用 Doctor 的 --network 逐项检查模型来源。给出安装位置、下载预算、可复用环境和配置差距。等我确认计划后，执行安装和真实视频验证，最后打开工作台并教我完成示例项目。
 
 [Agent Skill](.agents/skills/ai-video-deployer/SKILL.md) 覆盖检测、安装计划、确认、部署与验证。[客户端接入说明](.agents/skills/ai-video-deployer/references/clients.md) 包含 Codex、WorkBuddy 与 DeepSeek Harness 的接入方式，其中后两者仍待实机验收。
 
@@ -218,6 +226,9 @@ python -B deploy/doctor.py
 
 # 输出结构化结果，检查指定目标磁盘
 python -B deploy/doctor.py --json --target "E:\JingliuRuntime"
+
+# 检查依赖与全部模型下载入口
+python -B deploy/doctor.py --network
 
 # 生成安装计划，地区代码按实际情况填写
 python -B deploy/installer.py plan --region CN
@@ -281,10 +292,10 @@ B 可能代表需要使用低资源配置，也可能有暂时的空间或资源
 
 ## 社区与作品分享
 
-在 **成片与导出** 中预览并下载分享卡，再自行发布到 GitHub Discussions。分享卡可以包含缩略图与公开作品链接，提示词需要单独勾选。
+在 **成片与导出** 中预览并下载分享卡，再自行发布到 Gitee Issues。分享卡可以包含缩略图与公开作品链接，提示词需要单独勾选。
 
-- [GitHub Discussions](https://github.com/WaterXiao-git/jingliu-ai-video/discussions) 用于答疑、经验交流和作品分享。
-- [GitHub Issues](https://github.com/WaterXiao-git/jingliu-ai-video/issues) 用于提交可复现的问题和功能建议。
+- [Gitee Issues](https://gitee.com/xiao-ming-jun/jingliu-ai-video/issues) 用于答疑、问题反馈、功能建议与作品分享。分享作品时可在标题中注明「作品分享」。
+- [GitHub Discussions](https://github.com/WaterXiao-git/jingliu-ai-video/discussions) 也可交流经验和作品。
 - [项目展示页](https://waterxiao-git.github.io/jingliu-ai-video/) 提供项目入口与部署信息。
 - [社区说明与投稿接口](docs/community.md) 记录分享卡格式及后续托管方案。
 

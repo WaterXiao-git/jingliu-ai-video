@@ -1,6 +1,6 @@
 ---
 name: ai-video-deployer
-description: Check and deploy the Jingliu local AI short drama workflow from its GitHub repository. Use when a user asks whether their own computer can run Jingliu, wants to install or reuse a compatible ComfyUI environment, or needs help verifying their first generated shot.
+description: Check and deploy the Jingliu local AI short drama workflow from its Gitee repository or GitHub mirror. Use when a user asks whether their own computer can run Jingliu, wants to install or reuse a compatible ComfyUI environment, or needs help verifying their first generated shot.
 ---
 
 # Jingliu local deployment
@@ -9,7 +9,7 @@ Use the public release from the requested repository. These steps apply to Jingl
 
 1. Identify the target machine. If the shell is remote or in a hosted sandbox, give the user the local steps in [client setup](references/clients.md). Do not diagnose the cloud worker as the user's PC.
 2. Read the pinned release's deploy/deploy-spec.yaml and review the Doctor before running it. From the checkout run python -B deploy/doctor.py --json --target <installation-directory> on the user's machine. If they do not have Python, use the bundled Windows launcher's check mode. Add --network if requested to test the listed sources.
-3. Run python -B deploy/installer.py plan --json --target <installation-directory> --region <user-declared-region> with the actual options. Add --reuse-comfy <path> for an existing environment the user wants to reuse. Add --with-ollama when they want local script generation. Explain the grade, blocking checks, target volume, download estimate, storage budget, and license. Unknown hardware needs another local check. If installation is blocked, use deploy/platforms.yaml to offer relevant alternatives.
+3. Run python -B deploy/installer.py plan --json --target <installation-directory> --region <user-declared-region> with the actual options. Add --reuse-comfy <path> for an existing environment the user wants to reuse. Add --with-ollama when they want local script generation. Run python -B deploy/doctor.py --network to check dependency and all model endpoints when checking download readiness. Explain the grade, blocking checks, target volume, download estimate, storage budget, and license. Explain that ModelScope serves five weights and HF-Mirror serves the text encoder through an overseas CDN whose connectivity varies by operator. Unknown hardware needs another local check. If installation is blocked, use deploy/platforms.yaml to offer relevant alternatives.
 4. After user approval of the exact plan, run installer.py install with the same options and --approve <approval> for noninteractive execution. Confirm any separate Python bootstrap. If a file fails verification, report the expected version. Resume partial downloads with the same approved configuration.
 5. Run installer.py verify --video with the same target. Report whether the H3 clip and MP4 export succeeded. Start the workbench and open the local URL. Use the built-in 新手引导 to walk through one short shot.
 

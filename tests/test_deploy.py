@@ -129,6 +129,41 @@ class DeploymentFiles(unittest.TestCase):
             self.assertTrue((target / 'main.py').is_file())
             self.assertEqual(json.loads((target / '.jingliu-source.json').read_text())['sha256'], self.item['sha256'])
 
+    def test_ollama_imports_verified_local_weights_without_registry_pull(self):
+        with TemporaryDirectory(prefix='jingliu test ') as directory:
+            runtime = Path(directory)
+            binary = runtime / 'ollama.exe'
+            log = runtime / 'install.log'
+            with patch.object(installer, 'download') as download, patch.object(installer, 'checked') as checked:
+                installer.install_ollama_model(runtime, binary, log)
+            weights = installer.SPEC['ollama']['weights']
+            blob = runtime / 'ollama-models' / 'blobs' / ('sha256-' + weights['sha256'])
+            download.assert_called_once_with(weights, blob)
+            args = checked.call_args.args
+            self.assertEqual(args[:3], (binary, 'create', 'qwen2.5:7b'))
+            modelfile = args[4].read_text(encoding='utf-8')
+            self.assertIn('FROM "' + blob.as_posix() + '"', modelfile)
+            self.assertNotIn('__MODEL_PATH__', modelfile)
+            self.assertIn('<|im_start|>', modelfile)
+            self.assertEqual(checked.call_args.kwargs['env']['OLLAMA_MODELS'], str(runtime / 'ollama-models'))
+            self.assertEqual(checked.call_args.kwargs['env']['OLLAMA_NOPRUNE'], '1')
+
+    def test_network_probe_checks_every_weight_and_displays_results(self):
+        def respond(*args, **kwargs):
+            return FakeDownload(b'')
+
+        with patch.object(doctor, 'urlopen', side_effect=respond) as request:
+            network = doctor.check_network()
+        urls = {call.args[0].full_url for call in request.call_args_list}
+        for item in doctor.SPEC['models'] + [doctor.SPEC['ollama']['weights']]:
+            self.assertIn(item['url'], urls)
+        report = deepcopy(READY)
+        report.update(evaluation=doctor.evaluate(READY), network=network)
+        rendered = doctor.markdown(report)
+        for item in doctor.SPEC['models']:
+            self.assertIn(item['target'], rendered)
+        self.assertIn('model:ollama-qwen2.5-7b', rendered)
+
 
 if __name__ == '__main__':
     unittest.main()

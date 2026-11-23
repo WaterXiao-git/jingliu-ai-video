@@ -2,11 +2,11 @@
 
 在「成片与导出」点「导出分享卡」。选镜头，可填写已公开的 HTTPS 作品链接。你能看到即将下载的 JSON 和缩略图。只有勾选「将所选镜头提示词加入分享卡」才会复制提示词。修改内容后需要重新预览。
 
-在你确认可以公开后，把作品介绍、图片和链接自行提交到 GitHub Discussions。请核对模型及素材的使用范围。反馈安装问题时，可复制 Doctor 结果，并在提交前检查内容。
+在你确认可以公开后，把作品介绍、图片和链接自行提交到 [Gitee Issues](https://gitee.com/xiao-ming-jun/jingliu-ai-video/issues)，标题注明「作品分享」。也可使用 [GitHub Discussions](https://github.com/WaterXiao-git/jingliu-ai-video/discussions)。请核对模型及素材的使用范围。反馈安装问题时，可复制 Doctor 结果，并在提交前检查内容。
 
 ## 无服务器起步
 
-GitHub Discussions 用于答疑、作品征集与反馈。GitHub Pages 可以展示文档、教程和维护者选中的作品条目。展示页只存封面和公开链接，视频由创作者选择的平台提供播放。发布前审查作品来源和可展示地区。
+Gitee 主仓库用于下载和问题交流，GitHub 镜像保留 Discussions 与自动检查。GitHub Pages 可以展示文档、教程和维护者选中的作品条目。展示页只存封面和公开链接，视频由创作者选择的平台提供播放。发布前审查作品来源和可展示地区。
 
 ## 投稿接口
 

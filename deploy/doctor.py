@@ -206,7 +206,9 @@ def venv_python(venv):
 
 def check_network():
     urls = {'pypi': 'https://pypi.org/simple/aiohttp/', 'github': SPEC['sources'][0]['url'],
-            'pytorch': SPEC['torch']['index'] + '/torch/', 'huggingface': SPEC['models'][0]['url']}
+            'pytorch': SPEC['torch']['index'] + '/torch/'}
+    urls.update({f"model:{item['target']}": item['url'] for item in SPEC['models']})
+    urls['model:ollama-qwen2.5-7b'] = SPEC['ollama']['weights']['url']
     results = {}
     for name, url in urls.items():
         try:
@@ -301,6 +303,10 @@ def markdown(report):
 
     for row in result['checks']:
         lines.append('| ' + ' | '.join(cell(row[field]) for field in ('item', 'actual', 'required', 'state', 'action')) + ' |')
+    if 'network' in report:
+        lines += ['', '### 下载入口连通性', '', '| 入口 | HTTP 状态 |', '|---|---|']
+        lines += [f'| {cell(name)} | {status if status is not None else "连接失败或超时"} |'
+                  for name, status in report['network'].items()]
     lines += ['', 'GPU、软件版本和网络探测原始字段可用 --json 查看。']
     if not result['can_install']:
         cards = json.loads((HERE / 'platforms.yaml').read_text(encoding='utf-8'))['platforms']
