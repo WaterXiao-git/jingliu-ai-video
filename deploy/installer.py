@@ -317,11 +317,11 @@ def install_locked(args, plan, runtime):
         flags = ['install', '--no-cache-dir', '--only-binary=:all:', '--no-deps']
         lock = ROOT / SPEC['python_lock']
         torch_names = ['torch', 'torchvision', 'torchaudio']
-        # Torch wheels come only from the CUDA index, other pins only from PyPI.
+        # Keep CUDA wheels and general Python packages on their separate pinned indexes.
         base_lock = scratch / 'pypi.lock'
         base_lock.write_text('\n'.join(line for line in lock.read_text(encoding='utf-8').splitlines()
                                        if line.split('==', 1)[0] not in torch_names) + '\n', encoding='utf-8')
-        checked(*pip, *flags, '--index-url', 'https://pypi.org/simple', '-r', base_lock, env=env, log=log)
+        checked(*pip, *flags, '--index-url', SPEC['pypi']['index'], '-r', base_lock, env=env, log=log)
         expected = SPEC['torch']
         checked(*pip, *flags, '--index-url', expected['index'], 'torch==' + expected['version'],
                 'torchvision==' + expected['torchvision'], 'torchaudio==' + expected['torchaudio'], env=env, log=log)

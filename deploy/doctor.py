@@ -205,7 +205,7 @@ def venv_python(venv):
 
 
 def check_network():
-    urls = {'pypi': 'https://pypi.org/simple/aiohttp/', 'github': SPEC['sources'][0]['url'],
+    urls = {'pypi': SPEC['pypi']['index'] + '/aiohttp/', 'github': SPEC['sources'][0]['url'],
             'pytorch': SPEC['torch']['index'] + '/torch/'}
     urls.update({f"model:{item['target']}": item['url'] for item in SPEC['models']})
     urls['model:ollama-qwen2.5-7b'] = SPEC['ollama']['weights']['url']

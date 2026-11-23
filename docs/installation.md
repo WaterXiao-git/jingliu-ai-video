@@ -42,7 +42,23 @@ ClipProj 的魔搭镜像采用 master 下载入口，安装器仍以清单中固
 
     python -B deploy/doctor.py --network
 
-源码包、Python、PyTorch、FFmpeg 和 Ollama 程序使用清单中各自的发布源，仍需要访问相应服务。硬件检测报告会列出 PyPI、GitHub、PyTorch 和六个权重入口的连通结果。
+硬件检测报告会列出 PyPI、GitHub、PyTorch 和六个权重入口的连通结果。
+
+## 程序与依赖的国内镜像
+
+0.1.3 起，安装器使用以下固定版本的国内下载源。
+
+| 资源 | 当前来源 | 核对结果 |
+|---|---|---|
+| Python 3.11.9 x64 安装包 | [华为云 Python 镜像](https://mirrors.huaweicloud.com/python/3.11.9/) | 完整读取并校验，大小与 SHA-256 均匹配原清单 |
+| 84 个普通 Python 依赖 | [阿里云 PyPI 镜像](https://mirrors.aliyun.com/pypi/simple/) | 固定版本的 Windows / Python 3.11 wheel 均已核对，索引中的 SHA-256 匹配官方记录 |
+| torch、torchvision、torchaudio | [上海交大 CUDA 13.0 镜像](https://mirror.sjtu.edu.cn/pytorch-wheels/cu130/) | 已找到清单锁定版本的 Windows / Python 3.11 wheel，分段读取返回有效 ZIP 文件，实际存储位于交大域名 |
+
+三个 PyTorch 包使用清单中的固定版本，普通依赖按 requirements-win-cu130.txt 中的版本安装。安装器分别从两个镜像安装 CUDA 包和普通依赖。上游索引记录在清单的 upstream_index 中，安装器使用表中的国内入口。
+
+ComfyUI 与两个插件的源码包、FFmpeg 和 Ollama 程序包目前使用 GitHub 发布源。源码可按固定提交镜像到 Gitee，程序包也可在核对版本和校验值后分发到国内托管服务。CNB 提供 Ollama 国内镜像，本次抽样确认 v0.33.3 的 Windows ZIP 可从 asset.cnb.cool 读取，当前锁定的 v0.40.16 尚未完成同版镜像验证。
+
+因此，本版已接入三类程序与依赖的国内镜像，全新安装仍需访问其余发布源。版本等效性、文件校验与实际连通性需要逐项核对。
 
 ## 安装到别的磁盘
 

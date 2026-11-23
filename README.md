@@ -7,7 +7,7 @@
 <p align="center">在自己的电脑上，把剧本、角色参考图和分镜制作成 AI 短剧。</p>
 
 <p align="center">
-  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/tags"><img src="https://img.shields.io/badge/version-0.1.2-8062DE" alt="版本 0.1.2"></a>
+  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/tags"><img src="https://img.shields.io/badge/version-0.1.3-8062DE" alt="版本 0.1.3"></a>
   <a href="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml"><img src="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml/badge.svg" alt="GitHub 自动检查"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6FE3B7" alt="应用源码 MIT 许可"></a>
 </p>
@@ -62,6 +62,8 @@ Doctor 支持在 Windows、Linux 和 macOS 上做只读检测。Linux、macOS �
 视频主模型、视频 VAE、音频 VAE、ClipProj 和可选的 Qwen2.5 7B 编剧权重从 **魔搭 ModelScope** 下载。文字编码器通过 **HF-Mirror** 下载。安装器校验文件大小和 SHA-256，并复用校验通过的已有文件。
 
 HF-Mirror 的文件请求可能跳转到 Hugging Face 的境外 CDN。本机已通过免代理的分段读取测试，其他运营商的连通性需以本机检测为准。安装器使用 HTTPS 和固定校验值验证下载内容。[逐项来源与验证方式](docs/installation.md#模型来源与校验)
+
+Python 3.11.9 安装包使用华为云镜像，普通 Python 依赖使用阿里云 PyPI 镜像，CUDA 13.0 版 PyTorch 使用上海交大镜像。ComfyUI、插件源码、FFmpeg 和 Ollama 程序包仍使用清单中的 GitHub 发布源。[安装资源来源](docs/installation.md#程序与依赖的国内镜像)
 
 ## 快速开始
 
