@@ -1,0 +1,67 @@
+{
+  "video_generated": true,
+  "sampling_steps": 4,
+  "formal_default_sampling_steps": 20,
+  "formal_default_checked_via_api": true,
+  "video_job_id": "ff85c306ca394698818b324d8d82a8ba",
+  "export_job_id": "bd68c465553845fd94c9a0905b54525f",
+  "scope": "functional_smoke_test",
+  "h3_elapsed_seconds": 2075.03,
+  "source_frames": 22,
+  "unique_source_frames": 22,
+  "audio_voice": "local-zh-female",
+  "full_mp4_decode": "passed",
+  "old_20_step_observation": "stopped before completion; not counted as passed",
+  "original_model_directory_reused": true,
+  "files": {
+    "h3-clip.mp4": {
+      "bytes": 53503,
+      "sha256": "c3168feb532df1a22300d77a711e357a98dc89c4aae1c0474fa08ef2344b08a2"
+    },
+    "export.mp4": {
+      "bytes": 122383,
+      "sha256": "75be4112853da249c3a14d070179efb0c81115337df918d0dc7ed07349f4ce52"
+    },
+    "export.srt": {
+      "bytes": 45,
+      "sha256": "9932151393edd2e950be7d2be9a7832b8464fc59fe9630c5b0ee4cd1ab83159c"
+    },
+    "frame.png": {
+      "bytes": 204914,
+      "sha256": "2fc7a69481210de870fb2063c6290acb2b4c150dbf924c5c073c6f90219d74a9"
+    }
+  },
+  "media": {
+    "duration": "0.750000",
+    "streams": [
+      {
+        "codec_type": "video",
+        "codec_name": "h264",
+        "width": 720,
+        "height": 1280,
+        "r_frame_rate": "24/1",
+        "nb_frames": "18"
+      },
+      {
+        "codec_type": "audio",
+        "codec_name": "aac",
+        "r_frame_rate": "0/0",
+        "nb_frames": "37",
+        "sample_rate": "48000",
+        "channels": 2
+      }
+    ]
+  },
+  "native_start_seconds": [
+    5.059,
+    4.295,
+    4.511
+  ],
+  "hardware": {
+    "os": "Windows 11 x64",
+    "gpu": "RTX 4060 Laptop 8GB",
+    "ram_class_gib": 16,
+    "observed_graphics_clock_mhz": 210,
+    "sw_power_cap_observed": true
+  }
+}

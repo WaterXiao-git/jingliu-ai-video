@@ -82,7 +82,7 @@ def verify_project(base, data, location, video, evidence, *, video_steps=4):
     if video:
         print(f'H3 功能验收使用 {video_steps} 步短镜头；正式生成默认 20 步。', flush=True)
         jobs = post(project_path + '/jobs', {'kind': 'video', 'shot_id': shot['id'], 'steps': video_steps})
-        clip = wait_job(base, jobs[0]['id'], 1800)
+        clip = wait_job(base, jobs[0]['id'], 3600)
         path = data / 'projects' / project['id'] / clip['file']
         if not path.is_file() or path.stat().st_size < 1024:
             raise RuntimeError('H3 返回的镜头文件为空。')

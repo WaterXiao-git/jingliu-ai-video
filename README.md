@@ -78,6 +78,8 @@ Python 3.11.9 使用华为云镜像中的官方 NuGet 免安装包，普通 Pyth
 
 EXE 为未签名预览版，其他实体机器仍需验收。源码下载和脚本入口继续可用。
 
+已通过 [EXE 启动到真实 H3、离线中文配音、字幕和 MP4 的功能验收](docs/acceptance/2026-11-24-win-exe/index.md)。安装验收使用明确标注的 4 步短镜头，正式生成默认仍为 20 步；启动耗时与生成耗时分别记录。
+
 ### 下载项目
 
 从 [Gitee 主仓库](https://gitee.com/xiao-ming-jun/jingliu-ai-video) 的「克隆/下载」下载 ZIP，完整解压到有足够空间的磁盘。也可以在 PowerShell 中执行以下命令。
