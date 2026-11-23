@@ -102,4 +102,8 @@ ClipProj 的魔搭镜像采用 master 下载入口，安装器仍以清单中固
 
     python -B -m unittest discover -s tests -v
 
-测试在不下载模型的条件下覆盖硬件判断和下载恢复。全新环境的完整下载和首次出片，应在另一台干净的 Windows NVIDIA 电脑上验收。
+19 项轻量测试覆盖硬件判断、中文声线条件、下载恢复、兼容文件和国内域名限制。Windows、Linux、macOS CI 通过。
+
+v0.1.4 已在同机独立目录完成国内资源完整下载、独立环境安装与真实出片，包含 CPU 编剧、分镜导入、H3、离线中文系统配音、字幕及 MP4 解码。[验收报告、样片与校验记录](acceptance/2026-11-23/index.md)。另一台实体机器及其他系统的完整视频部署仍需单独验收。
+
+需要复核安装网络时，可把 deploy/acceptance_guard 目录加入本次启动进程的 PYTHONPATH，并将 JINGLIU_ACCEPTANCE_AUDIT 设为本机日志目录。它会记录并限制 Python 的 DNS 和 socket 连接。默认安装已给 pip 子进程启用这一守卫，日志写入目标目录 pip-domain-audit。普通创作启动不会自动启用该审计，以便用户主动选择标注为联网的声音服务。

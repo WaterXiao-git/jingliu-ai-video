@@ -1,0 +1,20 @@
+{
+  "title": "信号",
+  "script": "小机器人：收到。",
+  "assets": [
+    {
+      "kind": "character",
+      "name": "小机器人",
+      "prompt": "一个微笑的小机器人站在月台上，背景是夜晚的月台灯光"
+    }
+  ],
+  "shots": [
+    {
+      "title": "机器人接收信号",
+      "seconds": 5,
+      "visual": "小机器人站在月台上，微笑着接收信号，背景是夜晚的月台灯光",
+      "prompt": "A small robot standing on a night train platform with a smile, receiving a signal, background is night platform lights",
+      "dialogue": "小机器人：收到。"
+    }
+  ]
+}
