@@ -185,7 +185,7 @@ class ComfyEngine:
             queue_run.WORKFLOW = str(WORKFLOW)
             queue_run.SERVER = COMFY_URL
             update(7, '准备参考图与 H3 工作流')
-            overrides = {'11.steps': 20, '12.noise_seed': shot['seed'] if shot['seed'] is not None else random.randrange(2**32),
+            overrides = {'11.steps': job.get('steps', 20), '12.noise_seed': shot['seed'] if shot['seed'] is not None else random.randrange(2**32),
                          '8.width': width, '8.height': height, '8.length': frames,
                          '8.prompt': shot['prompt'] or shot['visual'],
                          '16.filename_prefix': f"video/drama_studio/{job['id']}/shot"}

@@ -8,6 +8,7 @@ param(
     [string] $Region,
     [switch] $WithOllama,
     [switch] $Video,
+    [ValidateSet(4, 8, 12, 20)] [int] $VideoSteps = 4,
     [switch] $AllowPythonBootstrap,
     [string] $PlanFile,
     [string] $Approve,
@@ -210,7 +211,7 @@ try {
             if ($Approve) { $installArguments += @('--approve', $Approve) }
             & $entry -B $tool install @installArguments
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            & $entry -B $tool verify --target $Target --video
+            & $entry -B $tool verify --target $Target --video --video-steps $VideoSteps
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             if ($NoStart) { exit 0 }
             & (Join-Path $PSScriptRoot 'launch.ps1') -Target $Target
@@ -218,7 +219,7 @@ try {
         }
         Verify {
             $verifyArgs = @('--target', $Target)
-            if ($Video) { $verifyArgs += '--video' }
+            if ($Video) { $verifyArgs += @('--video', '--video-steps', "$VideoSteps") }
             & $entry -B $tool verify @verifyArgs
             exit $LASTEXITCODE
         }

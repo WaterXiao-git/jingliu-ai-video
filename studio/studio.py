@@ -476,6 +476,8 @@ def api(studio):
         if kind in ('video', 'image'):
             require(bool(os.environ.get('JINGLIU_REGION')), '请先通过部署工具确认模型许可并启动工作台。', 409)
         if kind == 'video':
+            steps = body.get('steps', 20)
+            require(type(steps) is int and 4 <= steps <= 40, '采样步数请使用 4–40 的整数。')
             shots = [studio.find_shot(project, body['shot_id'])] if body.get('shot_id') else [s for s in project['shots'] if s['first'] and not s['clip']]
             require(shots, '没有待生成的镜头。请先选择首帧，或在单镜头页面重新生成。')
             for shot in shots:
@@ -484,7 +486,7 @@ def api(studio):
                 if shot['last']:
                     studio.media_file(project, shot['last'], IMAGE_EXT)
                 require(shot['prompt'] or shot['visual'], f"请为「{shot['title']}」填写动作提示词。")
-            jobs = [studio.enqueue(project, 'video', shot_id=shot['id'], label=shot['title']) for shot in shots]
+            jobs = [studio.enqueue(project, 'video', shot_id=shot['id'], label=shot['title'], steps=steps) for shot in shots]
         elif kind == 'image':
             if body.get('asset_id'):
                 asset = next((a for a in project['assets'] if a['id'] == body['asset_id']), None)

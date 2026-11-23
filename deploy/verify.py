@@ -26,7 +26,7 @@ def wait_job(base, job_id, timeout):
     raise RuntimeError('等待测试任务超时。可查看 verify-comfy.log。')
 
 
-def verify(runtime, config, video):
+def verify(runtime, config, video, *, video_steps=4):
     if not valid_region(config.get('region')):
         raise RuntimeError('运行配置缺少可用地区声明，请重新确认安装。')
     location = ffmpeg_dir(runtime)
@@ -60,7 +60,7 @@ def verify(runtime, config, video):
                     if not applied.get('shots') or not applied.get('script'):
                         raise RuntimeError('编剧草案无法导入工作台分镜。')
                     (evidence / 'draft-applied.json').write_text(json.dumps(applied, ensure_ascii=False, indent=2), encoding='utf-8')
-                verify_project(base, data, location, video, evidence)
+                verify_project(base, data, location, video, evidence, video_steps=video_steps)
             finally:
                 stop_owned(process)
                 log = data / 'comfy.log'
@@ -70,7 +70,7 @@ def verify(runtime, config, video):
     print(f'验证通过 · {label}', flush=True)
 
 
-def verify_project(base, data, location, video, evidence):
+def verify_project(base, data, location, video, evidence, *, video_steps=4):
     def post(path, payload):
         return read_url(base + path, payload=payload, studio=True, method='POST')
 
@@ -80,7 +80,8 @@ def verify_project(base, data, location, video, evidence):
     post(project_path + '/shots', {'id': shot['id'], 'seconds': 0.75,
                                    'quality': 'quick', 'dialogue': '旁白：收到。'})
     if video:
-        jobs = post(project_path + '/jobs', {'kind': 'video', 'shot_id': shot['id']})
+        print(f'H3 功能验收使用 {video_steps} 步短镜头；正式生成默认 20 步。', flush=True)
+        jobs = post(project_path + '/jobs', {'kind': 'video', 'shot_id': shot['id'], 'steps': video_steps})
         clip = wait_job(base, jobs[0]['id'], 1800)
         path = data / 'projects' / project['id'] / clip['file']
         if not path.is_file() or path.stat().st_size < 1024:
@@ -102,3 +103,6 @@ def verify_project(base, data, location, video, evidence):
     shutil.copyfile(output.with_suffix('.srt'), evidence / 'export.srt')
     checked(exe, '-v', 'error', '-i', output, '-ss', '0.4', '-frames:v', '1', evidence / 'frame.png')
     print(f'验收样片与字幕保存在 {evidence}', flush=True)
+    (evidence / 'verification.json').write_text(json.dumps({'video_generated': video, 'sampling_steps': video_steps if video else None,
+        'video_job_id': clip['id'] if video else None, 'export_job_id': export['id'],
+        'scope': 'functional_smoke_test', 'formal_default_sampling_steps': 20}, indent=2), encoding='utf-8')

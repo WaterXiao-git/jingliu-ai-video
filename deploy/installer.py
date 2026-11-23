@@ -498,6 +498,8 @@ def main():
     parser.add_argument('--port', type=int, default=SPEC['ports']['studio'])
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--video', action='store_true', help='验证时提交真实 H3 任务')
+    parser.add_argument('--video-steps', type=int, choices=(4, 8, 12, 20), default=4,
+                        help='功能验收采样步数，默认 4；不改变正式生成的默认 20 步')
     args = parser.parse_args()
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
@@ -526,7 +528,7 @@ def main():
             run(runtime, config)
         elif args.action == 'verify':
             from verify import verify
-            verify(runtime, config, args.video)
+            verify(runtime, config, args.video, video_steps=args.video_steps)
         else:
             port = config['ports']['studio']
             print_json(read_url(f'http://{LOCAL}:{port}/api/status'))

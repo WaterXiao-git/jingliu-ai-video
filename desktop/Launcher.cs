@@ -151,10 +151,12 @@ namespace Jingliu {
         readonly Label status = new Label { Text = "选择运行目录，从检查开始。", Dock = DockStyle.Fill, AutoSize = true, ForeColor = Color.FromArgb(185, 165, 255) };
         readonly Label space = new Label { AutoSize = true, ForeColor = Color.Silver, Dock = DockStyle.Fill };
         readonly ProgressBar progress = new ProgressBar { Dock = DockStyle.Fill, Height = 5, Visible = false, Style = ProgressBarStyle.Marquee };
-        readonly Button planButton, installButton, openButton, stopButton;
+        readonly Button planButton, installButton, openButton, stopButton, cancelButton;
         Dictionary<string, object> plan;
         string signature;
         bool busy;
+        bool cancelled;
+        Process currentProcess;
         bool initializing = true;
         readonly bool autoOpen;
 
@@ -205,7 +207,8 @@ namespace Jingliu {
             var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true };
             planButton = Button("① 检测并准备计划", Prepare); installButton = Button("② 确认并安装", Install);
             openButton = Button("打开工作台", Open); stopButton = Button("关闭后台", Stop);
-            actions.Controls.AddRange(new Control[] { planButton, installButton, openButton, stopButton, Button("模型许可", ShowLicense), Button("帮助 / 在线方案", Help) });
+            cancelButton = Button("停止当前操作", Cancel);
+            actions.Controls.AddRange(new Control[] { planButton, installButton, openButton, stopButton, Button("模型许可", ShowLicense), Button("帮助 / 在线方案", Help), cancelButton });
             layout.Controls.Add(actions, 0, 6); layout.Controls.Add(status, 0, 7); layout.Controls.Add(progress, 0, 8); layout.Controls.Add(log, 0, 9);
             string initial = requestedTarget;
             if (String.IsNullOrEmpty(initial)) {
@@ -228,6 +231,8 @@ namespace Jingliu {
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (busy) { e.Cancel = true; MessageBox.Show(this, "检测、安装或启动正在进行，请等待当前操作结束后关闭窗口。", "镜流"); } };
             initializing = false; LoadExisting(); UpdateSpace(); UpdateButtons();
             Append("欢迎使用镜流。\n已有部署：直接打开工作台。\n首次使用：选择空间充足的目录 → 检测并准备计划 → 阅读许可并确认安装。\n生成时可在工作台的任务队列查看进度，或进入星光等待室。");
+            // Font assignment can reset the design DPI before controls are added.
+            AutoScaleDimensions = new SizeF(96F, 96F);
             Shown += delegate { if (autoOpen && File.Exists(ConfigPath)) BeginInvoke(new Action(Open)); };
         }
         Button Button(string text, Action action) {
@@ -241,6 +246,7 @@ namespace Jingliu {
         void UpdateButtons() {
             bool canInstall = plan != null && signature == Signature && (bool)((Dictionary<string, object>)((Dictionary<string, object>)plan["report"])["evaluation"])["can_install"];
             planButton.Enabled = !busy; installButton.Enabled = !busy && canInstall && license.Checked;
+            cancelButton.Enabled = busy && currentProcess != null && !cancelled;
             openButton.Enabled = stopButton.Enabled = !busy && File.Exists(ConfigPath);
             target.Enabled = reuse.Enabled = region.Enabled = writer.Enabled = port.Enabled = license.Enabled = !busy;
         }
@@ -283,7 +289,7 @@ namespace Jingliu {
             if (writer.Checked) args.Add("-WithOllama"); return args;
         }
         async Task<bool> Operation(string label, string script, List<string> args) {
-            if (busy) return false; busy = true; progress.Visible = true; status.Text = label; UpdateButtons();
+            if (busy) return false; busy = true; cancelled = false; progress.Visible = true; status.Text = label; UpdateButtons();
             try {
                 Directory.CreateDirectory(Core.StateRoot);
                 using (var file = new StreamWriter(Path.Combine(Core.StateRoot, "desktop.log"), true, Encoding.UTF8))
@@ -294,13 +300,32 @@ namespace Jingliu {
                         lock (gate) { file.WriteLine(e.Data); file.Flush(); } Append(e.Data);
                     };
                     process.OutputDataReceived += receive; process.ErrorDataReceived += receive;
-                    process.Start(); process.BeginOutputReadLine(); process.BeginErrorReadLine();
+                    process.Start(); currentProcess = process; UpdateButtons(); process.BeginOutputReadLine(); process.BeginErrorReadLine();
                     await Task.Run(() => process.WaitForExit());
                     if (process.ExitCode != 0) throw new IOException("操作未完成（退出码 " + process.ExitCode + "），请查看下方详情。");
                 }
                 status.Text = "操作完成。"; return true;
-            } catch (Exception error) { Append(error.Message); status.Text = "操作未完成，请查看详情后重试。"; return false; }
-            finally { busy = false; progress.Visible = false; UpdateButtons(); }
+            } catch (Exception error) {
+                Append(cancelled ? "当前操作已停止。已校验的下载会保留，可在同一目录重新准备计划后继续。" : error.Message);
+                status.Text = cancelled ? "当前操作已停止。" : "操作未完成，请查看详情后重试。"; return false;
+            }
+            finally { currentProcess = null; busy = false; progress.Visible = false; UpdateButtons(); }
+        }
+        async void Cancel() {
+            Process owned = currentProcess;
+            if (!busy || owned == null || cancelled || owned.HasExited) return;
+            if (MessageBox.Show(this, "停止本次检测或安装？未完成的验证会中断，已校验的模型和可续传文件会保留。", "停止当前操作", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            cancelled = true; UpdateButtons();
+            try {
+                int pid = owned.Id;
+                await Task.Run(() => {
+                    if (owned.HasExited) return;
+                    using (var kill = Process.Start(new ProcessStartInfo {
+                        FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "taskkill.exe"),
+                        Arguments = "/PID " + pid + " /T /F", UseShellExecute = false, CreateNoWindow = true
+                    })) kill.WaitForExit();
+                });
+            } catch (Exception error) { Append(error.Message); }
         }
         void SaveTarget() {
             Directory.CreateDirectory(Core.StateRoot);
@@ -328,7 +353,7 @@ namespace Jingliu {
             if (plan == null || signature != Signature || !license.Checked) return;
             try {
                 var args = SetupArgs("Install"); args.Add("-Approve"); args.Add((string)plan["approval"]); args.Add("-AllowPythonBootstrap"); args.Add("-NoStart");
-                if (await Operation("正在部署并验证真实视频，首次安装可能较久…", "deploy/setup.ps1", args)) {
+                if (await Operation("正在部署并做 4 步短镜头功能验收；正式生成默认 20 步…", "deploy/setup.ps1", args)) {
                     SaveTarget(); LoadExisting(); status.Text = "部署和出片验证完成，可以打开工作台了。";
                 }
             } catch (Exception error) { Append(error.Message); }
