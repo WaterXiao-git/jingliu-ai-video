@@ -26,6 +26,18 @@ READY = {
 
 
 class Compatibility(unittest.TestCase):
+    def test_missing_chinese_voice_blocks_full_install_before_download(self):
+        report = deepcopy(READY)
+        report['software'] = {'local_chinese_voices': []}
+        result = doctor.evaluate(report)
+        self.assertFalse(result['can_install'])
+        self.assertTrue(any(check['item'] == '中文离线配音' and check['state'] == 'wait' for check in result['checks']))
+
+    def test_installed_chinese_female_voice_allows_full_install(self):
+        report = deepcopy(READY)
+        report['software'] = {'local_chinese_voices': [{'name': 'Chinese voice', 'gender': 'Female'}]}
+        self.assertTrue(doctor.evaluate(report)['can_install'])
+
     def test_entry_hardware_gets_low_resource_profile(self):
         low = doctor.evaluate(READY)
         self.assertEqual(low['grade'], 'B')

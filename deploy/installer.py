@@ -302,7 +302,9 @@ def install_locked(args, plan, runtime):
     scratch.mkdir(exist_ok=True)
     env = dict(os.environ, TEMP=str(scratch), TMP=str(scratch), TMPDIR=str(scratch), PYTHONUTF8='1',
                PIP_CONFIG_FILE=os.devnull, PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
-               NO_PROXY='*', HTTP_PROXY='', HTTPS_PROXY='', ALL_PROXY='')
+               NO_PROXY='*', HTTP_PROXY='', HTTPS_PROXY='', ALL_PROXY='',
+               PYTHONPATH=str(ROOT / 'deploy/acceptance_guard') + os.pathsep + os.environ.get('PYTHONPATH', ''),
+               JINGLIU_ACCEPTANCE_AUDIT=os.environ.get('JINGLIU_ACCEPTANCE_AUDIT') or str(runtime / 'pip-domain-audit'))
     if args.reuse_comfy:
         comfy = args.reuse_comfy.resolve()
         python = venv_python(comfy / '.venv')
@@ -330,6 +332,8 @@ def install_locked(args, plan, runtime):
             raise RuntimeError('请用 64 位 Python 3.11 启动安装器。')
         if not python.is_file() or not (venv / 'pyvenv.cfg').is_file():
             checked(sys.executable, '-m', 'venv', venv, env=env, log=log)
+        checked(python, '-B', '-c', "import sys; assert getattr(sys, '_jingliu_acceptance_guard', False), 'Distribution guard did not load'",
+                env=env, log=log)
         pip = [python, '-m', 'pip', '--isolated', '--disable-pip-version-check', '--log', runtime / 'pip-network.log']
         flags = ['install', '--no-cache-dir', '--only-binary=:all:', '--no-deps']
         lock = ROOT / SPEC['python_lock']
@@ -460,7 +464,7 @@ def studio_environment(runtime, config):
                 JINGLIU_COMFY=config['comfy'], JINGLIU_COMFY_PORT=str(config['ports']['comfy']),
                 JINGLIU_OLLAMA_PORT=str(config['ports']['ollama'] if config['ollama_binary'] else 11434),
                 JINGLIU_WORKFLOW=str(ROOT / SPEC['workflow']), JINGLIU_REGION=config['region'],
-                JINGLIU_COMMUNITY=SPEC['repository'] + '/discussions')
+                JINGLIU_COMMUNITY=SPEC['repository'] + ('/issues' if 'gitee.com/' in SPEC['repository'] else '/discussions'))
 
 
 def start(runtime, config, foreground=True, *, data=None):

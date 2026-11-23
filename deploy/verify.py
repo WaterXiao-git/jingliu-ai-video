@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 import time
 
@@ -55,6 +56,10 @@ def verify(runtime, config, video):
                     if not isinstance(drafted.get('shots'), list) or not drafted['shots'] or not drafted.get('script'):
                         raise RuntimeError('编剧模型没有生成可用剧本和分镜。')
                     (evidence / 'draft.json').write_text(json.dumps(drafted, ensure_ascii=False, indent=2), encoding='utf-8')
+                    applied = read_url(route + '/apply-draft', payload={}, studio=True, method='POST')
+                    if not applied.get('shots') or not applied.get('script'):
+                        raise RuntimeError('编剧草案无法导入工作台分镜。')
+                    (evidence / 'draft-applied.json').write_text(json.dumps(applied, ensure_ascii=False, indent=2), encoding='utf-8')
                 verify_project(base, data, location, video, evidence)
             finally:
                 stop_owned(process)
@@ -88,6 +93,11 @@ def verify_project(base, data, location, video, evidence):
         raise RuntimeError('导出任务未生成 SRT。')
     exe = str(Path(location) / 'ffmpeg.exe') if location else 'ffmpeg'
     checked(exe, '-v', 'error', '-xerror', '-i', output, '-f', 'null', '-')
+    ffprobe = str(Path(location) / 'ffprobe.exe') if location else 'ffprobe'
+    metadata = json.loads(subprocess.check_output([ffprobe, '-v', 'error', '-show_streams', '-show_format', '-of', 'json', str(output)]))
+    if not {'video', 'audio'} <= {stream['codec_type'] for stream in metadata['streams']}:
+        raise RuntimeError('成片缺少视频或本地配音流。')
+    (evidence / 'media.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
     shutil.copyfile(output, evidence / 'export.mp4')
     shutil.copyfile(output.with_suffix('.srt'), evidence / 'export.srt')
     checked(exe, '-v', 'error', '-i', output, '-ss', '0.4', '-frames:v', '1', evidence / 'frame.png')

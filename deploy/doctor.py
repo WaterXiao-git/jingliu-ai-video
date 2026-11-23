@@ -63,6 +63,15 @@ def windows_hardware():
     return result
 
 
+def chinese_voices():
+    script = ('[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); '
+              'Add-Type -AssemblyName System.Speech; $speech=New-Object System.Speech.Synthesis.SpeechSynthesizer; '
+              'try { $voices=@($speech.GetInstalledVoices() | Where-Object {$_.Enabled -and $_.VoiceInfo.Culture.Name -eq "zh-CN"} | '
+              'ForEach-Object {@{name=$_.VoiceInfo.Name; gender=$_.VoiceInfo.Gender.ToString()}}); '
+              'ConvertTo-Json -InputObject $voices -Compress } finally {$speech.Dispose()}')
+    return read_json('powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script, timeout=10)
+
+
 def linux_hardware():
     try:
         values = dict(re.findall(r'^(\w+):\s+(\d+)', Path('/proc/meminfo').read_text(), re.M))
@@ -199,6 +208,7 @@ def detect(target, reuse=None):
                      'cuda_driver_maximum': cuda_driver, 'cuda_toolkit': toolkit,
                      'ffmpeg': version_of('ffmpeg', '-version'), 'ffprobe': version_of('ffprobe', '-version'),
                      'ffmpeg_required_features': media_support() if shutil.which('ffmpeg') and shutil.which('ffprobe') else None,
+                     'local_chinese_voices': chinese_voices() if system == 'Windows' else None,
                      'ollama_service': local_ollama()},
     }
 
@@ -297,6 +307,14 @@ def evaluate(report, budget_bytes=None):
     level = 'unknown' if free is None else 'wait' if free < budget else 'ok'
     add('目标卷剩余空间', round(free / GIB, 2) if free is not None else None, f'{budget / GIB:.2f} GiB',
         level, '请选择有空间的目标卷，或复用已经校验的环境和模型。')
+
+    software = report.get('software', {})
+    if os_name == 'Windows' and 'local_chinese_voices' in software:
+        voices = software['local_chinese_voices']
+        has_default = any(voice.get('gender') == 'Female' for voice in voices or [])
+        add('中文离线配音', [voice['name'] for voice in voices] if voices is not None else None, 'Windows 中文女声（默认）',
+            'unknown' if voices is None else 'ok' if has_default else 'wait',
+            '请在 Windows 语音设置中安装中文语音包，然后复检。男声为可选声线。')
 
     states = {check['state'] for check in checks}
     is_no_gpu = any(c['item'] in ('NVIDIA GPU', '单卡专用显存', '物理内存') and c['state'] == 'unsupported' for c in checks)

@@ -1,7 +1,8 @@
 """Opt-in network audit for reproducible domestic installation acceptance runs.
 
 Add this directory to PYTHONPATH and set JINGLIU_ACCEPTANCE_AUDIT to a log
-directory. Normal application launches do not load this module.
+directory. The installer also enables it for its Python dependency installation
+children. Normal application launches do not load this module.
 """
 import ipaddress
 import json
