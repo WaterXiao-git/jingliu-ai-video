@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import copy
+import hashlib
 import json
 import mimetypes
 import os
@@ -260,7 +261,7 @@ def api(studio):
     async def index(request):
         return web.FileResponse(STATIC / 'index.html', headers={'Cache-Control': 'no-cache'})
 
-    @routes.get('/static/{name:app\\.js|onboarding\\.js|style\\.css}')
+    @routes.get('/static/{name:app\\.js|onboarding\\.js|waiting\\.js|waiting\\.css|style\\.css}')
     async def static(request):
         return web.FileResponse(STATIC / request.match_info['name'], headers={'Cache-Control': 'no-cache'})
 
@@ -275,6 +276,11 @@ def api(studio):
                                   'ollama': ollama is not None, 'voices': engine.VOICES,
                                   'community': os.environ.get('JINGLIU_COMMUNITY', ''),
                                   'h3_confirmed': bool(os.environ.get('JINGLIU_REGION'))})
+
+    @routes.get('/api/identity')
+    async def identity(request):
+        workspace = hashlib.sha256(os.path.normcase(str(studio.data.resolve())).encode('utf-8')).hexdigest()
+        return web.json_response({'app': 'jingliu', 'workspace': workspace})
 
     @routes.get('/api/projects')
     async def list_projects(request):

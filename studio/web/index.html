@@ -7,6 +7,8 @@
   <title>镜流 · AI 短剧工作台</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23b9a5ff'/%3E%3Cpath d='M14 28h36v24H14zM14 28l-3-9 36-7 3 9zM27 34l11 6-11 6z' stroke='%23161126' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/waiting.css">
+  <script defer src="/static/waiting.js"></script>
   <script defer src="/static/app.js"></script>
   <script defer src="/static/onboarding.js"></script>
 </head>
@@ -31,6 +33,12 @@
     </div>
   </div>
   <dialog id="dialog"></dialog>
+  <dialog id="wait-lounge" aria-labelledby="wait-title">
+    <header class="wait-head"><div><span class="wait-kicker">JINGLIU / INTERMISSION</span><h2 id="wait-title">星光等待室</h2><p>灵感继续酝酿，让小机器人先跑一会儿。</p></div><button class="button quiet small" data-wait-close>返回队列</button></header>
+    <div class="wait-scene"><canvas width="900" height="300" role="img" aria-label="机器人跳跃小游戏：按空格或点击跳跃躲避路障"></canvas><span class="wait-score" data-wait-score>0000 / 星光跑道</span></div>
+    <div class="wait-controls"><button class="button primary" data-wait-play>开始 / 重新挑战</button><p data-wait-note>空格、轻点画面或点击按钮跳跃。游戏不会改变生成速度。</p></div>
+    <div class="wait-task"><span class="wait-kicker">真实任务进度</span><p data-wait-task role="status" aria-live="polite">正在查看生成队列…</p><progress max="100" aria-label="当前生成任务进度"></progress></div>
+  </dialog>
   <aside id="onboarding" class="panel" aria-label="新手引导" hidden></aside>
   <div id="toast" role="status" aria-live="polite"></div>
 </body>

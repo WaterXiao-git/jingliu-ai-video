@@ -371,6 +371,12 @@ def install_locked(args, plan, runtime):
               'region': args.region, 'version': SPEC['version'],
               'ports': {**SPEC['ports'], 'studio': args.port}}
     write_json(runtime / 'runtime.json', config)
+    if os.name == 'nt':
+        try:
+            checked('powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                    ROOT / 'deploy/shortcut.ps1', '-Target', runtime)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            print(f'环境已安装，但桌面快捷方式未创建：{error}。可稍后运行 deploy/shortcut.ps1。')
     print('运行环境已就绪。请完成 verify --video，或运行 start 打开工作台。', flush=True)
 
 
@@ -440,14 +446,15 @@ def ollama_environment(runtime):
 
 
 @contextlib.contextmanager
-def start_ollama(runtime, binary):
+def start_ollama(runtime, binary, *, port=None):
     if not binary:
         yield
         return
-    port = SPEC['ports']['ollama']
+    port = port or SPEC['ports']['ollama']
     check_port(port)
     with (runtime / 'ollama.log').open('ab') as log:
-        process = subprocess.Popen([binary, 'serve'], env=ollama_environment(runtime), stdout=log,
+        env = dict(ollama_environment(runtime), OLLAMA_HOST=f'{LOCAL}:{port}')
+        process = subprocess.Popen([binary, 'serve'], env=env, stdout=log,
                                    stderr=subprocess.STDOUT, creationflags=NO_WINDOW)
         try:
             wait_for(f'http://{LOCAL}:{port}/api/version', process)
@@ -515,7 +522,8 @@ def main():
             raise RuntimeError('运行环境尚未配置，请先执行 plan 和 install。')
         config = json.loads(path.read_text(encoding='utf-8'))
         if args.action == 'start':
-            start(runtime, config)
+            from launcher import run
+            run(runtime, config)
         elif args.action == 'verify':
             from verify import verify
             verify(runtime, config, args.video)

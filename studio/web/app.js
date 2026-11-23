@@ -60,6 +60,7 @@ function chrome() {
   $('#nav').innerHTML=pages.filter(([key])=>state.project||key==='jobs').map(([key,name,path])=>`<button class="nav-item ${state.page===key?'current':''}" data-page="${key}" title="${name}" ${state.page===key?'aria-current="page"':''}>${svg(path)}<span class="nav-label">${name}</span>${key==='jobs'&&allActive?`<span class="counter">${allActive}</span>`:''}</button>`).join('');
   $('#breadcrumb').innerHTML=`<span>工作区</span><span class="slash">/</span><strong>${esc(state.project?.name || '所有项目')}</strong>`;
   $('#queue-top').textContent=allActive?`任务队列 · ${allActive}`:'任务队列';
+  if(state.status.workflow===undefined) { $('#engine-status').textContent='工作台已就绪 · 检查引擎中';return; }
   $('#engine-status').innerHTML=`<span class="status-dot ${state.status.comfy?'':'idle'}"></span>${state.status.comfy?'H3 已连接':state.status.workflow?'H3 按需启动':'H3 工作流未找到'}<span class="slash">·</span>${state.status.ollama?'Ollama 已连接':'Ollama 待连接'}`;
 }
 
@@ -159,6 +160,7 @@ function jobsPage() {
   const sorted=state.jobs;
   const table=sorted.map(job=>`<tr><td><strong>${esc(job.label)}</strong><small class="job-when">${esc(job.project_name)} · ${date(job.created)}</small></td><td>${badge(jobKinds[job.kind]||job.kind)}</td><td>${badge(...states[job.state])}<div class="progress ${job.state}"><i style="width:${Number(job.progress)||0}%"></i></div><small>${Number(job.progress)||0}%</small></td><td class="job-message">${esc(job.message)}</td><td><div class="job-controls">${job.state==='failed'?button('重试','retry','small',`data-id="${job.id}"`):''}${job.state==='queued'?button('取消','cancel-job','quiet small',`data-id="${job.id}"`):''}${job.file&&job.state==='done'?`<a href="${media(job.file,job.project_id)}" target="_blank" rel="noopener" class="button quiet small">打开结果</a>`:''}${job.kind==='draft'&&job.state==='done'?button('查看草案','view-draft','quiet small',`data-id="${job.project_id}"`):''}</div></td></tr>`).join('');
   return title('04 / GENERATION','生成队列','后台按顺序处理剧本、参考草图、视频和导出任务。关闭页面后，工作台仍可继续运行。')+
+    (activeJobs().length?`<section class="panel wait-invite"><div><strong>模型在忙，你可以歇一会儿</strong><p class="muted">首次加载可能较久。任务会在后台继续，完成后会在等待室提示。</p></div><button class="button quiet" data-wait-open>进入星光等待室 ↗</button></section>`:'')+
     (table?`<section class="panel table-wrap"><table><thead><tr><th>任务</th><th>类型</th><th>进度</th><th>运行详情</th><th>操作</th></tr></thead><tbody>${table}</tbody></table></section>`:empty('队列为空','提交一个剧本、图生视频或成片导出任务后，这里会显示进度。'));
 }
 
@@ -208,7 +210,7 @@ async function mutate(path,data,method='POST') {
   state.changed=false;
   return state.project;
 }
-async function refreshJobs() { state.jobs=await api('/jobs'); }
+async function refreshJobs() { state.jobs=await api('/jobs');window.JingliuWait?.updateJobs(state.jobs); }
 async function queue(data) {
   await api(projectPath('/jobs'),'POST',data);
   await refreshJobs();
@@ -371,12 +373,15 @@ async function poll() {
 
 async function init() {
   try {
-    await Promise.all([loadProjects(),refreshStatus(),refreshJobs()]);
+    await Promise.all([loadProjects(),refreshJobs()]);
     const remembered=localStorage.getItem('jingliu.project');
     const project=state.projects.find(p=>p.id===remembered)||state.projects[0];
     const route=location.hash.slice(1);
     if(project) await openProject(project.id,pages.some(([key])=>key===route)?route:'overview');
     else go(route==='jobs'?'jobs':'projects');
+    performance.mark('jingliu:ready');
+    // Service probes can time out while engines are stopped. Keep editing usable.
+    refreshStatus().then(()=>{if(!state.changed&&!dialog.open)render();}).catch(()=>{});
     setInterval(poll,2500);
     setInterval(()=>{if(!document.hidden)refreshStatus().catch(()=>{});},20000);
   } catch(error) {content.innerHTML=empty('无法连接工作台',error.message);}

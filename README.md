@@ -91,7 +91,13 @@ cd jingliu-ai-video
 
 默认运行数据保存在项目下的 `.runtime`。缺少兼容 Python 时，脚本会提示下载官方 Python 3.11 到目标目录。首次安装时间取决于下载速度和机器性能。
 
-工作台默认地址为 [http://127.0.0.1:7861/](http://127.0.0.1:7861/)。保持启动窗口运行，以便页面连接本地服务。后续使用时再次双击 **打开镜流.cmd**，会直接启动已配置的工作台。
+安装完成后，桌面会出现 **打开镜流** 和 **关闭镜流** 两个快捷方式。以后双击 **打开镜流** 即可：启动器在后台启动工作台，确认可访问后自动打开浏览器。重复点击会复用同一工作区的服务；关闭浏览器后，任务仍可继续。结束使用时先等待生成任务完成，再点 **关闭镜流**，释放本启动器管理的服务。
+
+工作台默认地址为 [http://127.0.0.1:7861/](http://127.0.0.1:7861/)，以实际安装配置为准。项目根目录的 **打开镜流.cmd** 也能启动默认 `.runtime` 环境。首次部署仍需完成上面的检查、下载与验证。
+
+工作台先打开，视频模型在提交镜头时才加载。本机从桌面快捷方式启动到服务就绪实测约 **4.6 秒**；启动器自身路径约 **3.1 秒**，已有服务时约 **0.3 秒**（均不含浏览器自身启动时间）。视频引擎曾测到约 **88 秒冷启动**，后续还需加载权重和生成。实际速度随电脑和缓存状态变化。[测试范围与结果](docs/startup.md)
+
+生成队列有任务时，可选择进入 **星光等待室**，按空格或点按画面，让小机器人跳过路障。小游戏默认不运行，打开后也需手动开始；任务结束会提示返回队列，离开等待室或切到后台会暂停。
 
 <details>
 <summary><strong>系统盘空间紧张，安装到其他磁盘</strong></summary>
@@ -104,7 +110,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\setup.ps1 -Mode
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\setup.ps1 -Mode Install -Target "E:\JingliuRuntime" -Region CN
 ~~~
 
-同时安装本地编剧时，在安装命令末尾添加 `-WithOllama`。此后使用相同目标路径启动。
+同时安装本地编剧时，在安装命令末尾添加 `-WithOllama`。安装创建的桌面快捷方式会记住这个目标路径。此后也可使用相同目标路径启动。
 
 ~~~powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy\setup.ps1 -Mode Start -Target "E:\JingliuRuntime"

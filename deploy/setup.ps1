@@ -190,7 +190,7 @@ try {
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & $entry -B $tool verify --target $Target --video
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            & $entry -B $tool start --target $Target
+            & (Join-Path $PSScriptRoot 'launch.ps1') -Target $Target
             exit $LASTEXITCODE
         }
         Verify {
@@ -200,7 +200,7 @@ try {
             exit $LASTEXITCODE
         }
         Start {
-            & $entry -B $tool start --target $Target
+            & (Join-Path $PSScriptRoot 'launch.ps1') -Target $Target
             exit $LASTEXITCODE
         }
     }
