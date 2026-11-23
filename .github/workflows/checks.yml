@@ -26,3 +26,13 @@ jobs:
       - run: python -B deploy/doctor.py --json
       - run: node --check studio/web/app.js
       - run: node --check studio/web/onboarding.js
+      - name: Parse Windows launcher and offline speech script
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          foreach ($script in @('deploy/setup.ps1', 'studio/local_speech.ps1')) {
+            $tokens = $null
+            $issues = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD $script), [ref]$tokens, [ref]$issues) | Out-Null
+            if ($issues) { throw ($issues | Out-String) }
+          }

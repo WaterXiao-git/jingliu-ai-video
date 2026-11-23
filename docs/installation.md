@@ -17,48 +17,51 @@
 | 加装本地 Ollama 编剧 | 45 GiB |
 | 复用已校验的 ComfyUI | 3 GiB 起，随作品数量增长 |
 
-新装模型共 22,195,387,552 字节。安装计划另列 Python wheels、FFmpeg 等预算。下载、临时文件和作品可以留在所选磁盘。Windows 页面文件由系统设置管理。
+新装视频模型共 21,679,777,336 字节。安装计划另列 Python wheels、FFmpeg 等预算。下载、临时文件和作品可以留在所选磁盘。Windows 页面文件由系统设置管理。
 
 ## 模型来源与校验
 
-0.1.2 起，安装器按下表选择权重入口。五个视频权重按已验证的文件大小与 SHA-256 校验，已有校验通过的权重可复用。原始发布地址保存在清单的 upstream_url 字段中，供核对来源。
+0.1.4 按下表选择国内权重入口。五个视频权重按固定文件大小与 SHA-256 校验，已有校验通过的权重可复用。原始发布地址保存在清单的 upstream_url 字段中，供核对来源。
 
 | 权重 | 当前下载入口 | 约下载大小 |
 |---|---|---|
 | H3 W4A8 主模型 | [魔搭 AI-ModelScope](https://modelscope.cn/models/AI-ModelScope/MiniMax-H3-w4a8) | 12.54 GB |
-| Qwen3-VL 4B INT8 文字编码器 | [HF-Mirror / Stick9190](https://hf-mirror.com/Stick9190/qwen3vl_4b_int8_convrot) | 5.37 GB |
+| Qwen3-VL 4B INT8 文字编码器 | [魔搭 Comfy-Org / Krea-2](https://modelscope.cn/models/Comfy-Org/Krea-2) | 4.86 GB |
 | H3 视频 VAE INT8 | [魔搭 Kijai](https://modelscope.cn/models/Kijai/MiniMax-H3-experimental) | 3.17 GB |
 | H3 音频 VAE FP32 | [魔搭 Comfy-Org](https://modelscope.cn/models/Comfy-Org/MiniMax-H3) | 0.61 GB |
 | ClipProj 4B v3 MLP | [魔搭 HF 镜像仓库](https://modelscope.cn/models/hf/NicoLab28-ClipProj-MiniMax-H3) | 0.50 GB |
 | 可选 Qwen2.5 7B Q4_K_M 编剧 | [魔搭 bartowski](https://modelscope.cn/models/bartowski/Qwen2.5-7B-Instruct-GGUF) | 4.68 GB |
 
-魔搭五项下载请求已通过本机免代理分段读取，实际文件来自 modelscope.cn 的国内 CDN。文字编码器暂未找到同哈希的魔搭副本，使用 HF-Mirror 的固定版本入口，其文件请求会跳转到 Hugging Face CDN。本机免代理分段读取已通过，其他地区与运营商仍需自行检测。HTTPS 下载与完整 SHA-256 校验用于验证文件内容，下载失败可按原参数重试。
+六个权重均已从魔搭国内 CDN 完整下载并校验。新的文字编码器来自 Comfy-Org，文件与旧版 5.37 GB 编码器不同。清单保留旧文件的确切大小与 SHA-256 作为兼容项，旧用户无需覆盖已校验的文件。
 
 ClipProj 的魔搭镜像采用 master 下载入口，安装器仍以清单中固定的大小和 SHA-256 校验文件。其余魔搭权重使用已核对的修订号。[完整清单](../deploy/deploy-spec.yaml)
 
-可选编剧模型通过同一下载器获取 GGUF，校验后写入目标目录的 ollama-models/blobs 内容寻址存储，再用本地 Modelfile 注册为 qwen2.5:7b。注册时复用该 blob。对话模板随仓库提供，适配工作台的中文剧本和 JSON 输出。
+可选编剧模型通过同一下载器获取 GGUF，校验后写入目标目录的 ollama-models/blobs 内容寻址存储，再用本地 Modelfile 注册为 qwen2.5:7b。Ollama 0.33.3 会在本机生成规范化 blob，可能另外占用约 4.7 GB，45 GiB 预算已留出这部分空间。原始已校验 GGUF 保留，便于重装与核对。对话模板随仓库提供，适配工作台的中文剧本和 JSON 输出。
+
+本机 Ollama GPU 编剧探测长时间未返回，本版默认使用 CPU 编剧，生成视频继续使用 CUDA。希望测试其他编剧设备的开发者可在启动前设置 JINGLIU_OLLAMA_NUM_GPU（Ollama 的 num_gpu 参数），但 GPU 编剧路径不计入本版通过的验收范围。
 
 可在仓库目录检查所有模型入口。检测只发出网络请求，模型权重在确认安装计划后下载。
 
     python -B deploy/doctor.py --network
 
-硬件检测报告会列出 PyPI、GitHub、PyTorch 和六个权重入口的连通结果。
+硬件检测报告会列出 Python、PyPI、PyTorch、六个权重、FFmpeg、Ollama 的连通结果，并检查项目内的源码包是否存在。
 
 ## 程序与依赖的国内镜像
 
-0.1.3 起，安装器使用以下固定版本的国内下载源。
+0.1.4 使用以下固定版本的国内下载源。HTTPS、文件大小与 SHA-256 用于验证完整下载；Python NuGet 包另已与官方 NuGet 记录中的 SHA-512 核对。
 
 | 资源 | 当前来源 | 核对结果 |
 |---|---|---|
-| Python 3.11.9 x64 安装包 | [华为云 Python 镜像](https://mirrors.huaweicloud.com/python/3.11.9/) | 完整读取并校验，大小与 SHA-256 均匹配原清单 |
-| 84 个普通 Python 依赖 | [阿里云 PyPI 镜像](https://mirrors.aliyun.com/pypi/simple/) | 固定版本的 Windows / Python 3.11 wheel 均已核对，索引中的 SHA-256 匹配官方记录 |
-| torch、torchvision、torchaudio | [上海交大 CUDA 13.0 镜像](https://mirror.sjtu.edu.cn/pytorch-wheels/cu130/) | 已找到清单锁定版本的 Windows / Python 3.11 wheel，分段读取返回有效 ZIP 文件，实际存储位于交大域名 |
+| Python 3.11.9 x64 官方 NuGet 包 | [华为云 NuGet 镜像](https://mirrors.huaweicloud.com/repository/nuget/v3/index.json) | 完整校验，解压后可直接运行、创建 venv 和使用 pip |
+| 85 个普通 Python 依赖 | [阿里云 PyPI 镜像](https://mirrors.aliyun.com/pypi/simple/) | 完整安装，包含全新环境所需的 setuptools 78.1.0 |
+| torch、torchvision、torchaudio | [上海交大 CUDA 13.0 镜像](https://mirror.sjtu.edu.cn/pytorch-wheels/cu130/) | 完整安装固定版本的 Windows / Python 3.11 wheel，通过 pip check 与实际 CUDA 运算 |
+| ComfyUI 与两个自定义节点 | 项目内 deploy/vendor 源码 ZIP | 原始提交及 SHA-256 固定，随 Gitee 项目下载，解压保留上游许可 |
+| FFmpeg / ffprobe 8.0.1 | [魔搭 FFmpeg 副本](https://modelscope.cn/models/BeePlug/LittleHornet-FFmpeg8.0.1-CLI-Win-x64) | 可执行文件哈希匹配 Gyan 8.0.1，许可证与上游说明一起下载 |
+| Ollama 0.33.3 Windows x64 | [CNB Ollama 同步仓库](https://cnb.cool/hex/ollama) | ZIP 完整 SHA-256 匹配 Ollama 官方发布记录 |
 
 三个 PyTorch 包使用清单中的固定版本，普通依赖按 requirements-win-cu130.txt 中的版本安装。安装器分别从两个镜像安装 CUDA 包和普通依赖。上游索引记录在清单的 upstream_index 中，安装器使用表中的国内入口。
 
-ComfyUI 与两个插件的源码包、FFmpeg 和 Ollama 程序包目前使用 GitHub 发布源。源码可按固定提交镜像到 Gitee，程序包也可在核对版本和校验值后分发到国内托管服务。CNB 提供 Ollama 国内镜像，本次抽样确认 v0.33.3 的 Windows ZIP 可从 asset.cnb.cool 读取，当前锁定的 v0.40.16 尚未完成同版镜像验证。
-
-因此，本版已接入三类程序与依赖的国内镜像，全新安装仍需访问其余发布源。版本等效性、文件校验与实际连通性需要逐项核对。
+下载器直连清单中的域名，校验每次 HTTP 跳转。允许的分发域名为 gitee.com、modelscope.cn、mirrors.huaweicloud.com、mirrors.aliyun.com、mirror.sjtu.edu.cn、s3.jcloud.sjtu.edu.cn、cnb.cool 及其子域名。安装子进程关闭代理环境变量，避免依赖本机已配置的海外代理。上游地址保留作溯源信息，不参与默认安装下载。
 
 ## 安装到别的磁盘
 
@@ -68,7 +71,7 @@ ComfyUI 与两个插件的源码包、FFmpeg 和 Ollama 程序包目前使用 Gi
 
 如需同时配置 Ollama 与 Qwen2.5 7B，可加 -WithOllama。已有兼容的 Ollama 可以继续用 11434 端口上的服务。也可手动录入镜头和台词。
 
-找不到 64 位 Python 3.11 时，启动脚本先做初检。初检通过后显示官方 Python 安装位置和下载大小，经同意安装到目标目录。工作台依赖安装在独立虚拟环境中。该命令的执行策略仅应用于这次启动的 PowerShell 进程。
+找不到 64 位 Python 3.11 时，启动脚本先做初检。初检通过后显示 Python 独立目录和下载大小，经同意解压官方 NuGet 包到目标目录的 python311。该方式不需要运行 MSI 安装器，也不修改系统 PATH。工作台依赖安装在独立虚拟环境中。该命令的执行策略仅应用于这次启动的 PowerShell 进程。
 
 同一路径以后可用以下命令启动。默认路径可双击 **打开镜流.cmd**。
 
@@ -92,7 +95,8 @@ ComfyUI 与两个插件的源码包、FFmpeg 和 Ollama 程序包目前使用 Gi
 - **端口被占用**。工作台默认使用 7861，受管理的 ComfyUI 使用 8193，可选独立 Ollama 使用 11435。可在安装时用 --port / -Port 改工作台端口。
 - **显存不足**。先保存其他应用的工作，释放显存，再选择试拍、短时长和较少的镜头。
 - **日志**。目标目录的 install.log 记录依赖安装，verify.log 和 verify-comfy.log 记录自检，studio-data/comfy.log 记录生成。
-- **验证**。verify 检查 CUDA、工作台和定帧导出，verify --video 还会真实生成 H3 镜头。AI 配音遇到网络错误时，可选源音轨、上传音轨或静音。
+- **验证**。verify 检查 CUDA、工作台、中文本地配音和字幕导出；安装了托管 Ollama 时还通过应用 API 生成真实剧本。verify --video 增加 H3 镜头生成。样片、SRT、检查帧与编剧结果保存在目标目录 acceptance 下。
+- **本地配音缺少声线**。在 Windows 中安装对应的中文语音包后重试。默认女声和可选男声取决于系统中实际安装的语音；这类声音与 Edge 神经声线不同。使用联网声线会把台词发送给 Edge TTS，也可以上传已录制的音轨。
 
 ## 测试
 

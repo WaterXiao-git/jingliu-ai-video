@@ -500,7 +500,7 @@ def api(studio):
         elif kind == 'export':
             require(project['shots'], '请先创建分镜。')
             options = {'size': body.get('size', '720'), 'subtitles': body.get('subtitles', True) is True,
-                       'audio': body.get('audio', 'source'), 'voice': body.get('voice', 'zh-CN-XiaoxiaoNeural')}
+                       'audio': body.get('audio', 'source'), 'voice': body.get('voice', 'local-zh-female')}
             require(options['size'] in ('720', '1080') and options['audio'] in ('source', 'tts', 'track', 'silent') and options['voice'] in engine.VOICES,
                     '导出选项无效。')
             for shot in project['shots']:

@@ -24,11 +24,13 @@ OLLAMA = f"http://127.0.0.1:{int(os.environ.get('JINGLIU_OLLAMA_PORT', '11434'))
 WORKFLOW = Path(os.environ.get('JINGLIU_WORKFLOW', ROOT / 'workflows/MiniMax_H3_FL2VA_audio.json')).resolve()
 FPS = 24
 VOICES = {
-    'zh-CN-XiaoxiaoNeural': '晓晓 · 青年女声',
-    'zh-CN-XiaoyiNeural': '晓伊 · 活泼女声',
-    'zh-CN-YunxiaNeural': '云夏 · 少年男声',
-    'zh-CN-YunxiNeural': '云希 · 青年男声',
-    'zh-CN-YunjianNeural': '云健 · 沉稳男声',
+    'local-zh-female': '本地中文女声 · Windows 系统语音',
+    'local-zh-male': '本地中文男声 · Windows 系统语音',
+    'zh-CN-XiaoxiaoNeural': '晓晓 · 青年女声（联网）',
+    'zh-CN-XiaoyiNeural': '晓伊 · 活泼女声（联网）',
+    'zh-CN-YunxiaNeural': '云夏 · 少年男声（联网）',
+    'zh-CN-YunxiNeural': '云希 · 青年男声（联网）',
+    'zh-CN-YunjianNeural': '云健 · 沉稳男声（联网）',
 }
 sys.path.insert(0, str(ROOT / 'scripts'))
 import queue_run
@@ -53,6 +55,23 @@ async def command(*args, cwd=None):
 
 async def probe(path):
     return json.loads(await command('ffprobe', '-v', 'error', '-show_streams', '-show_format', '-of', 'json', path))
+
+
+async def synthesize(words, voice, path):
+    if voice.startswith('local-zh-'):
+        if sys.platform != 'win32':
+            raise RuntimeError('本地系统配音目前支持 Windows，请上传音轨或选择联网声线。')
+        payload = path.with_suffix('.speech.json')
+        payload.write_text(json.dumps({'text': words, 'gender': 'Male' if voice == 'local-zh-male' else 'Female',
+                                      'output': str(path.resolve())}, ensure_ascii=False), encoding='utf-8')
+        try:
+            powershell = Path(os.environ['SystemRoot']) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
+            await asyncio.wait_for(command(powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                                           '-File', ROOT / 'studio/local_speech.ps1', '-InputFile', payload), 90)
+        finally:
+            payload.unlink(missing_ok=True)
+    else:
+        await asyncio.wait_for(edge_tts.Communicate(words, voice).save(str(path)), 90)
 
 
 async def request_json(session, url, payload=None, timeout=10):
@@ -84,7 +103,8 @@ async def draft(session, project, model, brief, count, seconds):
 {brief}'''
     result = await request_json(session, OLLAMA + '/api/generate', {
         'model': model, 'prompt': prompt, 'stream': False, 'format': 'json',
-        'keep_alive': 0, 'options': {'temperature': 0.5, 'num_ctx': 4096, 'num_predict': 3200},
+        'keep_alive': 0, 'options': {'temperature': 0.5, 'num_ctx': 4096, 'num_predict': 3200,
+                                   'num_gpu': int(os.environ.get('JINGLIU_OLLAMA_NUM_GPU', '0'))},
     }, timeout=600)
     try:
         output = json.loads(result['response'])
@@ -301,9 +321,10 @@ async def encode(project_dir, project, job, update):
         if mode == 'tts' and lines:
             speech = []
             for line_index, (speaker, words) in enumerate(lines):
-                path = scratch / f'voice{index:03d}_{line_index:02d}.mp3'
                 voice = voices.get(speaker, options['voice'])
-                await asyncio.wait_for(edge_tts.Communicate(words, voice).save(str(path)), 90)
+                extension = 'wav' if voice.startswith('local-zh-') else 'mp3'
+                path = scratch / f'voice{index:03d}_{line_index:02d}.{extension}'
+                await synthesize(words, voice, path)
                 length = float((await probe(path))['format']['duration'])
                 speech.append((path, length))
             gap = min(0.1, seconds / (len(lines) * 4))

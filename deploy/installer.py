@@ -418,7 +418,7 @@ def stop_owned(process):
 def install_ollama_model(runtime, binary, log):
     item = SPEC['ollama']
     weights = item['weights']
-    # Download into Ollama's content-addressed store so import reuses the same bytes.
+    # Retain the verified source GGUF. Ollama may create a separate normalized blob.
     env = ollama_environment(runtime)
     blob = Path(env['OLLAMA_MODELS']) / 'blobs' / ('sha256-' + weights['sha256'])
     download(weights, blob, network_log=runtime / 'download-network.jsonl')

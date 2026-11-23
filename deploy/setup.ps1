@@ -112,12 +112,12 @@ function Install-PrivatePython {
     $package = $spec.python_bootstrap
     $downloads = Join-Path $Target 'downloads'
     $destination = Join-Path $Target 'python311'
-    $installer = Join-Path $downloads 'python-3.11.9-amd64.exe'
+    $installer = Join-Path $downloads 'python.3.11.9.nupkg'
     if ((Test-Path -LiteralPath $destination) -and !(Test-Path -LiteralPath (Join-Path $destination 'python.exe'))) {
         throw '目标目录里已有未完成的 Python 安装。请检查该目录或使用新的 -Target。'
     }
-    Write-Host "将下载官方 Python 3.11.9 x64（约 26 MB），安装到 $destination"
-    if ((Read-Host '输入 YES 同意安装此用户级 Python') -cne 'YES') { throw '已取消 Python 安装。' }
+    Write-Host "将下载 Python 官方 NuGet 包（3.11.9 x64，约 18 MB），解压到 $destination"
+    if ((Read-Host '输入 YES 同意部署此独立 Python') -cne 'YES') { throw '已取消 Python 部署。' }
     New-Item -ItemType Directory -Path $downloads -Force | Out-Null
     if (!(Test-Path -LiteralPath $installer)) {
         $part = "$installer.part"
@@ -126,10 +126,20 @@ function Install-PrivatePython {
         Move-Item -LiteralPath $part -Destination $installer
     }
     if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $package.sha256) { throw 'Python 安装包校验失败。' }
-    $arguments = @('/quiet','InstallAllUsers=0','PrependPath=0','Include_launcher=0','Include_pip=1',
-                   'Include_test=0','Include_doc=0','Shortcuts=0',('TargetDir="' + $destination + '"'))
-    $install = Start-Process -FilePath $installer -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
-    if ($install.ExitCode -ne 0) { throw "Python 安装失败，退出码 $($install.ExitCode)。" }
+    $stage = Join-Path $Target ('.python311.extract-' + $PID)
+    if (Test-Path -LiteralPath $stage) { throw 'Python 临时解压目录已存在，请检查后重试。' }
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [IO.Compression.ZipFile]::ExtractToDirectory($installer, $stage)
+        if (!(Test-Path -LiteralPath (Join-Path $stage 'tools\python.exe'))) { throw 'Python 包缺少可执行文件。' }
+        Move-Item -LiteralPath (Join-Path $stage 'tools') -Destination $destination
+    } finally {
+        $absoluteStage = [IO.Path]::GetFullPath($stage)
+        if (!$absoluteStage.StartsWith($Target.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Python 临时目录不在安装目标内。'
+        }
+        if (Test-Path -LiteralPath $absoluteStage) { Remove-Item -LiteralPath $absoluteStage -Recurse -Force }
+    }
     return (Join-Path $destination 'python.exe')
 }
 

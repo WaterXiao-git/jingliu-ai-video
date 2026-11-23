@@ -7,7 +7,7 @@
 <p align="center">在自己的电脑上，把剧本、角色参考图和分镜制作成 AI 短剧。</p>
 
 <p align="center">
-  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/tags"><img src="https://img.shields.io/badge/version-0.1.3-8062DE" alt="版本 0.1.3"></a>
+  <a href="https://gitee.com/xiao-ming-jun/jingliu-ai-video/tags"><img src="https://img.shields.io/badge/version-0.1.4-8062DE" alt="版本 0.1.4"></a>
   <a href="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml"><img src="https://github.com/WaterXiao-git/jingliu-ai-video/actions/workflows/checks.yml/badge.svg" alt="GitHub 自动检查"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6FE3B7" alt="应用源码 MIT 许可"></a>
 </p>
@@ -36,7 +36,9 @@
 | 成片与导出 | 拼接镜头，添加配音和字幕，导出 MP4 与 SRT |
 | 新手引导 | 在页面中跟随提示，用内置「月台机器人」项目完成练习 |
 
-视频引擎使用 **ComfyUI + MiniMax H3**，成片处理使用 **FFmpeg**。本地编剧使用可选的 **Ollama + Qwen2.5 7B**，按台词配音使用联网的 **Edge TTS**。具体版本与文件校验值随仓库固定。[部署清单](deploy/deploy-spec.yaml)
+视频引擎使用 **ComfyUI + MiniMax H3**，成片处理使用 **FFmpeg**。本地编剧使用可选的 **Ollama + Qwen2.5 7B**。中文离线配音使用 Windows 已安装的中文系统声线，另保留联网 Edge TTS 声线供选择。具体版本与文件校验值随仓库固定。[部署清单](deploy/deploy-spec.yaml)
+
+本地编剧默认使用 CPU，给视频模型留出显存。首次编剧需加载模型，请等待队列完成。
 
 ## 安装前先看配置
 
@@ -51,7 +53,8 @@
 | 新装视频工作流 | 目标磁盘建议预留 **35 GiB** |
 | 同时安装本地编剧 | 目标磁盘建议预留 **45 GiB** |
 | 复用兼容 ComfyUI | 建议 **3 GiB 起**，另为素材、镜头和成片留空间 |
-| 网络 | 首次下载依赖和模型需要联网，五个视频权重合计约 **22.2 GB** |
+| 网络 | 首次从国内来源下载依赖和模型，五个视频权重合计约 **21.7 GB** |
+| 离线中文配音 | Windows 需已安装对应的中文系统语音包，默认使用中文女声 |
 
 较长镜头和更高画质会增加显存、内存与生成时间。首次运行建议用 **试拍档、1–2 秒、单个镜头**。
 
@@ -59,11 +62,11 @@ Doctor 支持在 Windows、Linux 和 macOS 上做只读检测。Linux、macOS �
 
 ## 模型下载来源
 
-视频主模型、视频 VAE、音频 VAE、ClipProj 和可选的 Qwen2.5 7B 编剧权重从 **魔搭 ModelScope** 下载。文字编码器通过 **HF-Mirror** 下载。安装器校验文件大小和 SHA-256，并复用校验通过的已有文件。
+五个视频权重和可选的 Qwen2.5 7B 编剧权重均从 **魔搭 ModelScope** 下载。安装器校验文件大小和 SHA-256，并复用校验通过的已有文件。
 
-HF-Mirror 的文件请求可能跳转到 Hugging Face 的境外 CDN。本机已通过免代理的分段读取测试，其他运营商的连通性需以本机检测为准。安装器使用 HTTPS 和固定校验值验证下载内容。[逐项来源与验证方式](docs/installation.md#模型来源与校验)
+安装下载只允许清单中的国内分发域名，并检查每次跳转。出现境外跳转时会停止并提示。新的文字编码器使用 Comfy-Org 在魔搭发布的转换版本，原有已校验的编码器仍可复用。[逐项来源与验证方式](docs/installation.md#模型来源与校验)
 
-Python 3.11.9 安装包使用华为云镜像，普通 Python 依赖使用阿里云 PyPI 镜像，CUDA 13.0 版 PyTorch 使用上海交大镜像。ComfyUI、插件源码、FFmpeg 和 Ollama 程序包仍使用清单中的 GitHub 发布源。[安装资源来源](docs/installation.md#程序与依赖的国内镜像)
+Python 3.11.9 使用华为云镜像中的官方 NuGet 免安装包，普通 Python 依赖使用阿里云镜像，CUDA 13.0 版 PyTorch 使用上海交大镜像。固定版本的 ComfyUI 与插件源码随 Gitee 项目包提供，FFmpeg 从魔搭下载，Ollama 从 CNB 下载。[安装资源来源](docs/installation.md#程序与依赖的国内镜像)
 
 ## 快速开始
 
@@ -194,7 +197,7 @@ Subtle body movement, soft blue ambient light, consistent character appearance.
 
 在 **角色与场景** 为同名角色选择声线，在 **成片与导出** 选择 **按台词合成配音**。角色声线优先，其他台词使用导出时选定的默认声线。可选少年男声、青年女声等预设。
 
-台词需要能在镜头时长内读完。配音提示语速过快时，缩短台词或增加镜头时长，然后重新导出。AI 配音需要联网调用 Edge TTS。
+台词需要能在镜头时长内读完。配音提示语速过快时，缩短台词或增加镜头时长，然后重新导出。默认的「本地中文女声」使用系统语音，可离线运行，音色取决于已安装的 Windows 中文声线。中文男声需要对应的系统语音包；缺少时会提示。标注「联网」的少年、青年等 Edge 声线需要网络。角色素材中设置的声线优先。
 
 ### 拼接并导出
 
@@ -260,7 +263,7 @@ B 可能代表需要使用低资源配置，也可能有暂时的空间或资源
 
 ### 磁盘空间不够怎么办
 
-将运行目录指定到有空间的磁盘，或复用已校验的 ComfyUI。新装视频模型约 22.2 GB，此外还需要运行环境、下载临时空间和作品空间。每次生成的片段会继续占用磁盘。
+将运行目录指定到有空间的磁盘，或复用已校验的 ComfyUI。新装视频模型约 21.7 GB，此外还需要运行环境、下载临时空间和作品空间。每次生成的片段会继续占用磁盘。
 
 ### 下载中断了，要重新开始吗
 

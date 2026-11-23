@@ -23,10 +23,12 @@
     "reuse_runtime_gib": 3
   },
   "python_bootstrap": {
-    "url": "https://mirrors.huaweicloud.com/python/3.11.9/python-3.11.9-amd64.exe",
-    "bytes": 26216840,
-    "sha256": "5ee42c4eee1e6b4464bb23722f90b45303f79442df63083f05322f1785f5fdde",
-    "upstream_url": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
+    "url": "https://mirrors.huaweicloud.com/artifactory/api/nuget/v3/nuget-remote/python/3.11.9/python.3.11.9.nupkg",
+    "bytes": 17478009,
+    "sha256": "9283876d58c017e0e846f95b490da3bca0fc0a6ee1134b2870677cfb7eec3c67",
+    "format": "nuget",
+    "upstream_url": "https://www.nuget.org/api/v2/package/python/3.11.9",
+    "upstream_sha512": "41On79FZ75irnOEBGFSjDV13j1nZb8m7EbB87SmQs1XwMEhrBwf3mMc8RCAXOrERh2qW6tWYFxi2BMTN1xxVjQ=="
   },
   "torch": {
     "index": "https://mirror.sjtu.edu.cn/pytorch-wheels/cu130",

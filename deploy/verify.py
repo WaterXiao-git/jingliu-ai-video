@@ -1,6 +1,7 @@
 """Verify the installed runtime through the public local application endpoints."""
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import time
 
@@ -42,7 +43,19 @@ def verify(runtime, config, video):
                     raise RuntimeError('工作台启动，但工作流或许可配置未加载。')
                 if config.get('ollama_binary') and 'qwen2.5:7b' not in status['models']:
                     raise RuntimeError('工作台连不上已安装的 Ollama 7B 模型。')
-                verify_project(base, data, location, video)
+                evidence = runtime / 'acceptance' / time.strftime('%Y%m%d-%H%M%S')
+                evidence.mkdir(parents=True, exist_ok=False)
+                if config.get('ollama_binary'):
+                    project = read_url(base + '/api/projects', payload={'name': '本地编剧验收', 'aspect': '9:16'}, studio=True, method='POST')
+                    route = base + '/api/projects/' + project['id']
+                    jobs = read_url(route + '/jobs', payload={'kind': 'draft', 'brief': '小机器人在月台收到信号，微笑着说：收到。只写一个简单镜头。',
+                                    'count': 1, 'seconds': 5, 'model': 'qwen2.5:7b'}, studio=True, method='POST')
+                    wait_job(base, jobs[0]['id'], 660)
+                    drafted = read_url(route)['draft']
+                    if not isinstance(drafted.get('shots'), list) or not drafted['shots'] or not drafted.get('script'):
+                        raise RuntimeError('编剧模型没有生成可用剧本和分镜。')
+                    (evidence / 'draft.json').write_text(json.dumps(drafted, ensure_ascii=False, indent=2), encoding='utf-8')
+                verify_project(base, data, location, video, evidence)
             finally:
                 stop_owned(process)
                 log = data / 'comfy.log'
@@ -52,7 +65,7 @@ def verify(runtime, config, video):
     print(f'验证通过 · {label}', flush=True)
 
 
-def verify_project(base, data, location, video):
+def verify_project(base, data, location, video, evidence):
     def post(path, payload):
         return read_url(base + path, payload=payload, studio=True, method='POST')
 
@@ -67,10 +80,15 @@ def verify_project(base, data, location, video):
         path = data / 'projects' / project['id'] / clip['file']
         if not path.is_file() or path.stat().st_size < 1024:
             raise RuntimeError('H3 返回的镜头文件为空。')
-    jobs = post(project_path + '/jobs', {'kind': 'export', 'name': '部署验证', 'audio': 'silent', 'subtitles': True})
+        shutil.copyfile(path, evidence / 'h3-clip.mp4')
+    jobs = post(project_path + '/jobs', {'kind': 'export', 'name': '部署验证', 'audio': 'tts', 'voice': 'local-zh-female', 'subtitles': True})
     export = wait_job(base, jobs[0]['id'], 240)
     output = data / 'projects' / project['id'] / export['file']
     if not output.with_suffix('.srt').is_file():
         raise RuntimeError('导出任务未生成 SRT。')
     exe = str(Path(location) / 'ffmpeg.exe') if location else 'ffmpeg'
-    checked(exe, '-v', 'error', '-xerror', '-i', output, '-map', '0:v:0', '-f', 'null', '-')
+    checked(exe, '-v', 'error', '-xerror', '-i', output, '-f', 'null', '-')
+    shutil.copyfile(output, evidence / 'export.mp4')
+    shutil.copyfile(output.with_suffix('.srt'), evidence / 'export.srt')
+    checked(exe, '-v', 'error', '-i', output, '-ss', '0.4', '-frames:v', '1', evidence / 'frame.png')
+    print(f'验收样片与字幕保存在 {evidence}', flush=True)

@@ -172,7 +172,7 @@ function exportsPage() {
       ${field('成片名称',textInput('name',`${p.name} · 成片`,'maxlength="100"'))}<div class="field-row">
       ${field('导出分辨率',`<select name="size">${options([['720','720p'],['1080','1080p']],'720')}</select>`)}
       ${field('声音来源',`<select name="audio">${options([['track','项目音轨'],['tts','按台词合成配音'],['source','保留镜头原声'],['silent','静音']],p.track?'track':'source')}</select>`)}</div>
-      ${field('默认配音声线',`<select name="voice">${options(Object.entries(state.status.voices),'zh-CN-XiaoxiaoNeural')}</select>`,'AI 配音会联网调用 Edge TTS。角色素材里的同名声线优先。')}
+      ${field('默认配音声线',`<select name="voice">${options(Object.entries(state.status.voices),'local-zh-female')}</select>`,'本地中文声线使用 Windows 已安装的中文语音，可离线运行。标注“联网”的声线调用 Edge TTS。角色素材里的同名声线优先。')}
       <label class="checkbox"><input type="checkbox" name="subtitles" checked>烧录分镜台词字幕，同时保存 SRT</label>
       <div class="notice">有视频的镜头优先使用视频。只有首帧的镜头会按设定时长导出为定帧。</div>
       <div class="actions"><button class="button primary" type="submit" ${p.shots.length?'':'disabled'}>导出成片</button>${upload(p.track?'替换项目音轨':'上传项目音轨','track','audio/*,.m4a')}${p.track?badge('音轨已就绪','good'):''}</div>
