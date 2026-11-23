@@ -4,6 +4,8 @@
 
 [播放验收短片](sample.mp4) · [SRT 字幕](sample.srt) · [编剧输出](draft.json) · [结构化记录与文件校验值](result.json)
 
+产物摘要对应 [v0.1.4 发行版](https://gitee.com/xiao-ming-jun/jingliu-ai-video/releases/tag/v0.1.4) 验收附件 ZIP 中的原始文件。Git 源码检出会把 JSON、SRT 文本换行统一为 LF，直接核对文本摘要时请使用附件内文件；视频与 PNG 按原始二进制分发。
+
 <img src="frame.png" alt="国内安装验收样片：月台机器人与收到字幕" width="280">
 
 ## 验收结果
