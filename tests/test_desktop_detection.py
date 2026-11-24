@@ -17,7 +17,8 @@ class DesktopDetection(unittest.TestCase):
             subprocess.run([str(compiler), '/nologo', '/utf8output', '/reference:System.Web.Extensions.dll',
                             '/out:' + str(executable), str(ROOT / 'desktop/AutoSetup.cs'),
                             str(ROOT / 'tests/desktop_detection.cs')], check=True, capture_output=True)
-            result = subprocess.run([str(executable), directory], check=True, capture_output=True, text=True)
+            result = subprocess.run([str(executable), directory], capture_output=True, text=True, errors='replace')
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout.count('PASS '), 8)
 
 

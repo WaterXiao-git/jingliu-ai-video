@@ -8,7 +8,7 @@ class DetectionTests {
     static void Check(bool ok, string name) { if (!ok) throw new Exception(name); Console.WriteLine("PASS " + name); }
     static void FileAt(string path) { Directory.CreateDirectory(Path.GetDirectoryName(path)); File.WriteAllText(path, "fixture"); }
     static int Main(string[] args) {
-        string root = args[0], comfy = Path.Combine(root, "中文 空格", "ComfyUI"), runtime = Path.Combine(root, ".runtime");
+        string root = Path.GetFullPath(args[0]), comfy = Path.Combine(root, "中文 空格", "ComfyUI"), runtime = Path.Combine(root, ".runtime");
         Directory.CreateDirectory(runtime); Directory.CreateDirectory(Path.Combine(comfy, "models"));
         FileAt(Path.Combine(comfy, "main.py")); FileAt(Path.Combine(comfy, ".venv", "Scripts", "python.exe"));
         var disks = new[] { new DiskChoice { Root = "C:\\", Free = 100L << 30, System = true }, new DiskChoice { Root = "E:\\", Free = 60L << 30 } };
