@@ -2,7 +2,7 @@ param([string]$Executable, [string]$Preview)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $icon = [Drawing.Icon]::ExtractAssociatedIcon([IO.Path]::GetFullPath($Executable))
-if (!$icon) { throw 'EXE 没有可用图标' }
+if (!$icon) { throw 'No usable icon in the EXE' }
 $bitmap = $icon.ToBitmap()
 try {
     $colored = 0
@@ -17,7 +17,7 @@ try {
         }
     }
     if ($colored -lt ($bitmap.Width * $bitmap.Height / 5) -or $transparent -eq 0) {
-        throw 'EXE 图标缺少预期彩色内容或透明通道'
+        throw 'EXE icon is missing brand colors or alpha transparency'
     }
     if ($Preview) { $bitmap.Save([IO.Path]::GetFullPath($Preview), [Drawing.Imaging.ImageFormat]::Png) }
     @{width=$bitmap.Width; height=$bitmap.Height; colored_pixels=$colored; transparent_pixels=$transparent} | ConvertTo-Json -Compress
