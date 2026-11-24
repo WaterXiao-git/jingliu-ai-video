@@ -72,7 +72,7 @@ Python 3.11.9 使用华为云镜像中的官方 NuGet 免安装包，普通 Pyth
 
 ### Windows EXE（预览版）
 
-希望少接触命令行时，可从 [Gitee 国内下载页](https://gitee.com/xiao-ming-jun/jingliu-ai-video/releases/tag/v0.1.5-preview.1) 下载 **Jingliu.exe**，或下载便携 ZIP 解压后使用；另有 [GitHub 下载镜像](https://github.com/WaterXiao-git/jingliu-ai-video/releases/tag/v0.1.5-preview.1)。单文件约 16 MB，包含工作台与部署程序，双击打开启动中心，无需预先安装 Git 或 Node.js。首次使用在界面中选择运行目录、检测配置并查看安装计划，确认许可后部署；已有部署可直接选中 `runtime.json` 接入。
+希望少接触命令行时，可从 [Gitee 国内下载页](https://gitee.com/xiao-ming-jun/jingliu-ai-video/releases/tag/v0.1.5-preview.2) 下载 **Jingliu.exe**，或下载便携 ZIP 解压后使用；另有 [GitHub 下载镜像](https://github.com/WaterXiao-git/jingliu-ai-video/releases/tag/v0.1.5-preview.2)。单文件约 16 MB，包含工作台与部署程序，双击即可，无需预先安装 Git 或 Node.js。程序自动寻找已有部署；新电脑会自动选择空间充足的磁盘和空闲工作台端口，检测配置并准备计划。阅读许可、确认实际地区和预算后，点“一键安装并打开”。技术参数放在可选的“高级设置”中。
 
 此 EXE 面向 Windows 10 / 11 x64，使用系统 .NET Framework 4.8 或更新的 4.x；视频生成仍需满足上面的显卡和内存要求。模型继续从清单中的国内来源下载，不包含在 EXE 中。已部署后再次双击，可自动打开上次使用的工作台。[EXE 使用说明、验证范围与构建方法](docs/desktop.md)
 

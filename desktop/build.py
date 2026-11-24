@@ -9,7 +9,7 @@ import sys
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.1.5-preview.1'
+VERSION = '0.1.5-preview.2'
 # Explicit distribution roots: never scoop up an installed runtime or user files.
 INCLUDE = ('deploy', 'deploy/vendor', 'deploy/acceptance_guard', 'studio/web', 'studio/demo', 'workflows', 'scripts')
 EXTENSIONS = {'.py', '.ps1', '.yaml', '.txt', '.json', '.js', '.css', '.html', '.png', '.zip', '.modelfile'}
@@ -97,7 +97,7 @@ def main():
                '/win32manifest:' + str(ROOT / 'desktop/app.manifest'), '/out:' + str(executable),
                '/resource:' + str(stage / 'payload.zip') + ',Jingliu.Payload',
                '/resource:' + str(ROOT / 'docs/assets/jingliu-logo.png') + ',Jingliu.Logo',
-               str(ROOT / 'desktop/Launcher.cs'), str(generated)]
+               str(ROOT / 'desktop/Launcher.cs'), str(ROOT / 'desktop/AutoSetup.cs'), str(generated)]
     subprocess.run(command, check=True)
     checksum = hashlib.sha256(executable.read_bytes()).hexdigest()
     (output / 'Jingliu.exe.sha256').write_text(f'{checksum}  Jingliu.exe\n', encoding='ascii')

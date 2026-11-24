@@ -151,6 +151,7 @@ namespace Jingliu {
         readonly RichTextBox log = new RichTextBox { ReadOnly = true, Dock = DockStyle.Fill, BackColor = Color.FromArgb(17, 20, 31), ForeColor = Color.FromArgb(209, 214, 230), BorderStyle = BorderStyle.None, Font = new Font("Microsoft YaHei UI", 9), DetectUrls = false };
         readonly Label status = new Label { Text = "选择运行目录，从检查开始。", Dock = DockStyle.Fill, AutoSize = true, ForeColor = Color.FromArgb(185, 165, 255) };
         readonly Label space = new Label { AutoSize = true, ForeColor = Color.Silver, Dock = DockStyle.Fill };
+        readonly Label detected = new Label { AutoSize = true, ForeColor = Color.Silver, Dock = DockStyle.Fill };
         readonly ProgressBar progress = new ProgressBar { Dock = DockStyle.Fill, Height = 5, Visible = false, Style = ProgressBarStyle.Marquee };
         readonly Button planButton, installButton, openButton, stopButton, cancelButton;
         Dictionary<string, object> plan;
@@ -160,9 +161,11 @@ namespace Jingliu {
         Process currentProcess;
         bool initializing = true;
         readonly bool autoOpen;
+        readonly string explicitTarget;
+        bool autoSelected = true;
 
         internal LauncherForm(string appRoot, string requestedTarget, bool manage) {
-            root = appRoot; autoOpen = !manage;
+            root = appRoot; autoOpen = !manage; explicitTarget = requestedTarget;
             Text = "镜流 · AI 短剧启动中心";
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             StartPosition = FormStartPosition.CenterScreen;
@@ -171,13 +174,13 @@ namespace Jingliu {
             ClientSize = new Size(1000, 730); MinimumSize = new Size(900, 690);
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(26, 20, 26, 20), ColumnCount = 1, RowCount = 10 };
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 138));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 0));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 12));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); Controls.Add(layout);
             var heading = new Panel { Dock = DockStyle.Fill };
@@ -185,7 +188,7 @@ namespace Jingliu {
                 if (image != null) heading.Controls.Add(new PictureBox { Image = new Bitmap(image), SizeMode = PictureBoxSizeMode.Zoom, Size = new Size(58, 58), Location = new Point(0, 2) });
             }
             heading.Controls.Add(new Label { Text = "镜流 · 本地创作，从这里开始", AutoSize = true, Font = new Font(Font.FontFamily, 19, FontStyle.Bold), Location = new Point(73, 0) });
-            heading.Controls.Add(new Label { Text = "检查电脑 → 准备环境 → 打开工作台    /    Windows EXE 预览版 " + BuildInfo.Version, AutoSize = true, ForeColor = Color.Silver, Location = new Point(76, 42) });
+            heading.Controls.Add(new Label { Text = "自动检测 → 一键安装 → 开始创作    /    Windows EXE 预览版 " + BuildInfo.Version, AutoSize = true, ForeColor = Color.Silver, Location = new Point(76, 42) });
             layout.Controls.Add(heading, 0, 0);
             var paths = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 4 };
             paths.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 148)); paths.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); paths.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 102));
@@ -198,43 +201,49 @@ namespace Jingliu {
             var existing = Button("选择已有部署…", SelectRuntime);
             paths.Controls.Add(existing, 1, 2);
             paths.Controls.Add(new Label { Text = "可选；选择包含 runtime.json 的目录即可接入已有部署。", AutoSize = true, ForeColor = Color.Silver }, 1, 3);
-            layout.Controls.Add(paths, 0, 1); layout.Controls.Add(space, 0, 2);
+            paths.Visible = false;
+            layout.Controls.Add(paths, 0, 1);
+            var location = new Panel { Dock = DockStyle.Fill };
+            var advanced = Button("高级设置 ▾", delegate { });
+            advanced.Dock = DockStyle.Right;
+            location.Controls.Add(space); location.Controls.Add(advanced);
+            layout.Controls.Add(location, 0, 2);
             var options = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
             options.Controls.Add(new Label { Text = "实际地区", AutoSize = true, Padding = new Padding(0, 5, 0, 0) }); options.Controls.Add(region);
             options.Controls.Add(new Label { Text = "工作台端口", AutoSize = true, Padding = new Padding(15, 5, 0, 0) }); options.Controls.Add(port);
-            options.Controls.Add(writer); layout.Controls.Add(options, 0, 3);
-            layout.Controls.Add(new Label { Text = "新装建议 35 GiB；带编剧 45 GiB。首次准备计划时，缺少 Python 会下载约 18 MB。", AutoSize = true, ForeColor = Color.Silver }, 0, 4);
+            options.Controls.Add(writer); options.Visible = false; layout.Controls.Add(options, 0, 3);
+            advanced.Click += delegate {
+                bool show = !paths.Visible; paths.Visible = options.Visible = show;
+                float scale; using (var graphics = CreateGraphics()) scale = graphics.DpiY / 96F;
+                layout.RowStyles[1].Height = show ? 138 * scale : 0; layout.RowStyles[3].Height = show ? 36 * scale : 0;
+                advanced.Text = show ? "收起设置 ▴" : "高级设置 ▾";
+            };
+            layout.Controls.Add(detected, 0, 4);
             layout.Controls.Add(license, 0, 5);
             var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = true };
-            planButton = Button("① 检测并准备计划", Prepare); installButton = Button("② 确认并安装", Install);
+            planButton = Button("重新检测", Prepare); installButton = Button("一键安装并打开", Install);
             openButton = Button("打开工作台", Open); stopButton = Button("关闭后台", Stop);
             cancelButton = Button("停止当前操作", Cancel);
             actions.Controls.AddRange(new Control[] { planButton, installButton, openButton, stopButton, Button("模型许可", ShowLicense), Button("帮助 / 在线方案", Help), cancelButton });
             layout.Controls.Add(actions, 0, 6); layout.Controls.Add(status, 0, 7); layout.Controls.Add(progress, 0, 8); layout.Controls.Add(log, 0, 9);
-            string initial = requestedTarget;
-            if (String.IsNullOrEmpty(initial)) {
-                try { initial = (string)Core.Read(Path.Combine(Core.StateRoot, "desktop-settings.json"))["target"]; } catch { }
-            }
-            if (String.IsNullOrEmpty(initial)) {
-                string beside = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), ".runtime");
-                string above = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Application.ExecutablePath)), ".runtime");
-                if (File.Exists(Path.Combine(beside, "runtime.json"))) initial = beside;
-                else if (File.Exists(Path.Combine(above, "runtime.json"))) initial = above;
-            }
-            target.Text = initial ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "JingliuRuntime");
+            var choice = AutoSetup.Local(requestedTarget);
+            target.Text = choice.target; reuse.Text = choice.reuse ?? ""; port.Value = choice.port; writer.Checked = choice.writer; region.Text = choice.region;
             target.TextChanged += delegate { InvalidatePlan(); UpdateSpace(); };
             target.Leave += delegate { LoadExisting(); };
             reuse.TextChanged += delegate { InvalidatePlan(); UpdateSpace(); };
-            region.TextChanged += delegate { InvalidatePlan(); };
+            region.TextChanged += delegate { InvalidatePlan(); UpdateSpace(); };
             writer.CheckedChanged += delegate { InvalidatePlan(); UpdateSpace(); };
-            port.ValueChanged += delegate { InvalidatePlan(); };
+            port.ValueChanged += delegate { InvalidatePlan(); UpdateSpace(); };
             license.CheckedChanged += delegate { UpdateButtons(); };
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (busy) { e.Cancel = true; MessageBox.Show(this, "检测、安装或启动正在进行，请等待当前操作结束后关闭窗口。", "镜流"); } };
             initializing = false; LoadExisting(); UpdateSpace(); UpdateButtons();
-            Append("欢迎使用镜流。\n已有部署：直接打开工作台。\n首次使用：选择空间充足的目录 → 检测并准备计划 → 阅读许可并确认安装。\n生成时可在工作台的任务队列查看进度，或进入星光等待室。");
+            Append("欢迎使用镜流。" + choice.note + "\n首次使用会自动检测电脑并准备计划，无需填写目录和端口。阅读许可、核对实际地区与预算后，勾选同意并点“一键安装并打开”。\n高级设置可更改自动选择；国内下载不代表程序能判断你实际身处的地区。\n生成时可在工作台的任务队列查看进度，或进入星光等待室。");
             // Font assignment can reset the design DPI before controls are added.
             AutoScaleDimensions = new SizeF(96F, 96F);
-            Shown += delegate { if (autoOpen && File.Exists(ConfigPath)) BeginInvoke(new Action(Open)); };
+            Shown += delegate {
+                if (choice.existing) { if (autoOpen) BeginInvoke(new Action(Open)); }
+                else BeginInvoke(new Action(Prepare));
+            };
         }
         Button Button(string text, Action action) {
             var button = new Button { Text = text, AutoSize = true, Height = 34, FlatStyle = FlatStyle.Flat, Padding = new Padding(9, 3, 9, 3), Margin = new Padding(0, 2, 8, 2), ForeColor = ForeColor, BackColor = Color.FromArgb(42, 42, 61) };
@@ -243,12 +252,13 @@ namespace Jingliu {
         string ConfigPath { get { return Path.Combine(target.Text.Trim(), "runtime.json"); } }
         string PlanPath { get { return Path.Combine(Path.GetFullPath(target.Text.Trim()), "desktop-plan.json"); } }
         string Signature { get { return target.Text.Trim() + "|" + reuse.Text.Trim() + "|" + region.Text + "|" + port.Value + "|" + writer.Checked; } }
-        void InvalidatePlan() { if (initializing) return; plan = null; signature = null; license.Checked = false; UpdateButtons(); }
+        void InvalidatePlan() { if (initializing) return; autoSelected = false; plan = null; signature = null; license.Checked = false; UpdateButtons(); }
         void UpdateButtons() {
             bool canInstall = plan != null && signature == Signature && (bool)((Dictionary<string, object>)((Dictionary<string, object>)plan["report"])["evaluation"])["can_install"];
             planButton.Enabled = !busy; installButton.Enabled = !busy && canInstall && license.Checked;
             cancelButton.Enabled = busy && currentProcess != null && !cancelled;
             openButton.Enabled = stopButton.Enabled = !busy && File.Exists(ConfigPath);
+            license.Visible = installButton.Visible = !File.Exists(ConfigPath) || plan != null;
             target.Enabled = reuse.Enabled = region.Enabled = writer.Enabled = port.Enabled = license.Enabled = !busy;
         }
         void UpdateSpace() {
@@ -256,6 +266,9 @@ namespace Jingliu {
                 var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(target.Text.Trim())));
                 space.Text = String.Format("目标磁盘 {0} 剩余 {1:0.0} GiB · {2}", drive.Name, drive.AvailableFreeSpace / 1073741824.0, File.Exists(ConfigPath) ? "已找到部署配置，可直接打开" : "先检查预算，再开始下载");
             } catch { space.Text = "请选择可访问的本地磁盘目录。"; }
+            detected.Text = "运行目录：" + target.Text + "\n" + (String.IsNullOrWhiteSpace(reuse.Text) ? "新建视频环境" : "复用：" + reuse.Text) +
+                " · " + (writer.Checked ? "包含本地编剧" : "暂不加装编剧") + "\n实际地区：" + region.Text + "（默认 CN / 中国，请核对） · 工作台端口：" + port.Value;
+            license.Text = "我已阅读模型许可，确认实际使用地区为 " + region.Text + "，并同意显示的安装计划";
         }
         void LoadExisting() {
             try {
@@ -344,7 +357,23 @@ namespace Jingliu {
                 Append("\n—— 电脑检测结果 ——");
                 foreach (Dictionary<string, object> check in (IEnumerable)evaluation["checks"]) {
                     string state = (string)check["state"];
-                    Append((state == "ok" ? "✓ " : "! ") + check["item"] + "：" + Convert.ToString(check["actual"]) + "；要求 " + check["required"] + "；" + check["action"]);
+                    object actual = check["actual"];
+                    string detail = actual is IEnumerable && !(actual is string) ? Core.Json.Serialize(actual) : Convert.ToString(actual);
+                    Append((state == "ok" ? "✓ " : "! ") + check["item"] + "：" + detail + "；要求 " + check["required"] + "；" + check["action"]);
+                }
+                if (autoSelected && !String.IsNullOrWhiteSpace(reuse.Text) && !File.Exists(ConfigPath)) {
+                    bool incompatible = false;
+                    foreach (Dictionary<string, object> check in (IEnumerable)evaluation["checks"])
+                        if (((string)check["item"] == "复用目录" || (string)check["item"] == "复用软件版本") && (string)check["state"] != "ok") incompatible = true;
+                    if (incompatible) {
+                        var fresh = AutoSetup.Local(explicitTarget, false);
+                        initializing = true;
+                        try { target.Text = fresh.target; reuse.Text = ""; port.Value = fresh.port; writer.Checked = fresh.writer; }
+                        finally { initializing = false; }
+                        plan = null; license.Checked = false; UpdateSpace(); UpdateButtons();
+                        Append("已有 ComfyUI 不适配当前视频模型，保留它不变，自动改为准备独立环境并重新检查空间。" );
+                        Prepare(); return;
+                    }
                 }
                 Append(String.Format("\n已知资源下载约 {0:0.0} GB，另预估 Python 依赖 {1} GiB；目标盘需空闲 {2:0.0} GiB。", Convert.ToDouble(plan["known_download_bytes_baseline"]) / 1e9, plan["python_wheel_download_estimate_gib"], Convert.ToDouble(plan["minimum_target_free_bytes"]) / 1073741824.0));
                 status.Text = (bool)evaluation["can_install"] ? "检测通过。请阅读模型许可、确认地区和计划，勾选后安装。" : "当前条件未通过，请按检测结果调整，或查看在线方案。";
@@ -356,7 +385,7 @@ namespace Jingliu {
             try {
                 var args = SetupArgs("Install"); args.Add("-Approve"); args.Add((string)plan["approval"]); args.Add("-AllowPythonBootstrap"); args.Add("-NoStart");
                 if (await Operation("正在部署并做 4 步短镜头功能验收；正式生成默认 20 步…", "deploy/setup.ps1", args)) {
-                    SaveTarget(); LoadExisting(); status.Text = "部署和出片验证完成，可以打开工作台了。";
+                    SaveTarget(); LoadExisting(); status.Text = "部署和出片验证完成，正在打开工作台。"; Open();
                 }
             } catch (Exception error) { Append(error.Message); }
         }
@@ -409,8 +438,12 @@ namespace Jingliu {
     internal static class Program {
         static string Option(string[] args, string name) { int index = Array.IndexOf(args, name); return index >= 0 && index + 1 < args.Length ? args[index + 1] : null; }
         [STAThread] static int Main(string[] args) {
-            bool cli = Array.IndexOf(args, "--start") >= 0 || Array.IndexOf(args, "--stop") >= 0 || Array.IndexOf(args, "--self-test") >= 0;
+            bool cli = Array.IndexOf(args, "--start") >= 0 || Array.IndexOf(args, "--stop") >= 0 || Array.IndexOf(args, "--self-test") >= 0 || Array.IndexOf(args, "--detect") >= 0;
             try {
+                string detection = Option(args, "--detect");
+                if (detection != null) {
+                    File.WriteAllText(detection, Core.Json.Serialize(AutoSetup.Local(Option(args, "--target"))), new UTF8Encoding(false)); return 0;
+                }
                 string root = Core.EnsurePayload(Option(args, "--app-root"));
                 string target = Option(args, "--target");
                 string report = Option(args, "--self-test");
