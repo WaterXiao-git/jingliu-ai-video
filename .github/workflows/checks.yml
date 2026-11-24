@@ -43,6 +43,7 @@ jobs:
         run: |
           python -B desktop/build.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\desktop\check_icon.ps1 -Executable .\dist\Jingliu.exe
           $process = Start-Process -FilePath (Join-Path $PWD 'dist/Jingliu.exe') -ArgumentList "--self-test `"$PWD\dist\self-test.json`" --app-root `"$PWD\build\exe-smoke`"" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'EXE self-test failed' }
           $result = Get-Content 'dist/self-test.json' -Raw | ConvertFrom-Json

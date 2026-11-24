@@ -4,12 +4,14 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import struct
 import subprocess
 import sys
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.1.5-preview.2'
+VERSION = '0.1.5-preview.3'
+ICON_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 # Explicit distribution roots: never scoop up an installed runtime or user files.
 INCLUDE = ('deploy', 'deploy/vendor', 'deploy/acceptance_guard', 'studio/web', 'studio/demo', 'workflows', 'scripts')
 EXTENSIONS = {'.py', '.ps1', '.yaml', '.txt', '.json', '.js', '.css', '.html', '.png', '.zip', '.modelfile'}
@@ -58,6 +60,22 @@ def source_state(root=ROOT):
         return None, None
 
 
+def write_icon(destination, png_directory):
+    """Store RGBA PNG frames directly; GDI HICON conversion loses the alpha channel."""
+    entries = []
+    offset = 6 + 16 * len(ICON_SIZES)
+    for size in ICON_SIZES:
+        raw = (png_directory / f'{size}.png').read_bytes()
+        if (raw[:8] != b'\x89PNG\r\n\x1a\n' or raw[12:16] != b'IHDR'
+                or struct.unpack('>II', raw[16:24]) != (size, size) or raw[24:26] != bytes((8, 6))):
+            raise ValueError(f'图标必须是 {size}px 的 RGBA PNG')
+        entries.append((struct.pack('<BBBBHHII', size % 256, size % 256, 0, 0, 1, 32, len(raw), offset), raw))
+        offset += len(raw)
+    destination.write_bytes(struct.pack('<HHH', 0, 1, len(entries))
+                            + b''.join(header for header, _ in entries)
+                            + b''.join(raw for _, raw in entries))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT / 'dist')
@@ -76,18 +94,11 @@ def main():
     generated.write_text('namespace Jingliu { internal static class BuildInfo { '
                          f'public const string Version="{VERSION}"; public const string Digest="{digest}";'
                          ' } }', encoding='utf-8')
-    icon_script = stage / 'icon.ps1'
-    icon_script.write_text('param([string]$Source,[string]$Destination)\n'
-                          '$ErrorActionPreference="Stop"\nAdd-Type -AssemblyName System.Drawing\n'
-                          '$sourceImage=[Drawing.Image]::FromFile($Source)\n'
-                          '$bitmap=[Drawing.Bitmap]::new($sourceImage,[Drawing.Size]::new(64,64))\n'
-                          '$icon=[Drawing.Icon]::FromHandle($bitmap.GetHicon())\n'
-                          '$output=[IO.File]::Create($Destination)\n'
-                          'try{$icon.Save($output)}finally{$output.Dispose();$icon.Dispose();$bitmap.Dispose();$sourceImage.Dispose()}\n',
-                          encoding='utf-8-sig')
+    png_directory = stage / 'icon-frames'
     subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
-                    str(icon_script), '-Source', str(ROOT / 'docs/assets/jingliu-logo.png'),
-                    '-Destination', str(stage / 'jingliu.ico')], check=True)
+                    str(ROOT / 'desktop/build_icon.ps1'), '-Source', str(ROOT / 'docs/assets/jingliu-logo.png'),
+                    '-Destination', str(png_directory)], check=True)
+    write_icon(stage / 'jingliu.ico', png_directory)
     executable = output / 'Jingliu.exe'
     command = [str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/utf8output',
                '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll',

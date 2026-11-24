@@ -1,6 +1,8 @@
 import hashlib
 import importlib.util
 import json
+import struct
+import zlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -14,6 +16,30 @@ spec.loader.exec_module(build)
 
 
 class DesktopDistribution(unittest.TestCase):
+    def test_icon_preserves_rgba_frames_at_shell_and_taskbar_sizes(self):
+        def png(size):
+            def chunk(name, raw):
+                return struct.pack('>I', len(raw)) + name + raw + struct.pack('>I', zlib.crc32(name + raw))
+            # Half transparent, half brand color: losing alpha or RGB must change the frame bytes.
+            row = b'\x00' + (b'\x00\x00\x00\x00' * (size // 2)) + (b'\x80\x62\xde\xff' * (size - size // 2))
+            return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0))
+                    + chunk(b'IDAT', zlib.compress(row * size)) + chunk(b'IEND', b''))
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            for size in build.ICON_SIZES:
+                (root / f'{size}.png').write_bytes(png(size))
+            icon = root / 'logo.ico'; build.write_icon(icon, root)
+            raw = icon.read_bytes()
+            self.assertEqual(struct.unpack('<HHH', raw[:6]), (0, 1, len(build.ICON_SIZES)))
+            frames = []
+            for index, size in enumerate(build.ICON_SIZES):
+                width, height, _, _, planes, bpp, length, offset = struct.unpack_from('<BBBBHHII', raw, 6 + index * 16)
+                self.assertEqual((width or 256, height or 256, planes, bpp), (size, size, 1, 32))
+                self.assertEqual(raw[offset:offset + length], png(size))
+                frames.append((offset, offset + length))
+            self.assertEqual(frames[-1][1], len(raw))
+            self.assertTrue(all(frames[i][1] == frames[i + 1][0] for i in range(len(frames) - 1)))
+
     def test_zip_checkout_without_git_still_has_supported_build_metadata(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
