@@ -236,6 +236,10 @@ Subtle body movement, soft blue ambient light, consistent character appearance.
 
 [Agent Skill](.agents/skills/ai-video-deployer/SKILL.md) 覆盖检测、安装计划、确认、部署与验证。[客户端接入说明](.agents/skills/ai-video-deployer/references/clients.md) 包含 Codex、WorkBuddy 与 DeepSeek Harness 的接入方式，其中后两者仍待实机验收。
 
+### 交给 Agent 日常操作（部署完成后）
+
+[jingliu-video Skill](.agents/skills/jingliu-video/SKILL.md) 覆盖部署后的创作全流程：创建项目、上传角色参考图、编写分镜、排队生成镜头、等待任务、配音导出与下载成片。技能自带 `scripts/jingliu.py` CLI（纯标准库），任何具备本机终端与 Python 3 的 harness（WorkBuddy、Codex、zcode 等）均可接入，接入方式见其 [references/clients.md](.agents/skills/jingliu-video/references/clients.md)。配套 API 契约测试位于 `tests/test_jingliu_cli.py`（离线 mock，不依赖真实工作台）。
+
 <details>
 <summary><strong>开发者与 Agent 常用命令</strong></summary>
 
