@@ -91,6 +91,9 @@ class DesktopDistribution(unittest.TestCase):
                          'deploy/acceptance_guard/sitecustomize.py', 'deploy/qwen2.5.Modelfile',
                          'deploy/vendor/ComfyUI-783ab7282af1.zip'} <= names)
         self.assertTrue(all(p.is_file() for p in build.payload_files()))
+        self.assertIn('scripts/jingliu.py', names)
+        for relative in build.SKILL_FILES:
+            self.assertIn('.agents/skills/jingliu-video/' + relative, names)
 
 
 if __name__ == '__main__':

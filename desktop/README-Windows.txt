@@ -18,3 +18,5 @@ Jingliu.exe.sha256 用于核对 EXE 的 SHA-256。完整说明见启动中心的
 
 主仓库：https://gitee.com/xiao-ming-jun/jingliu-ai-video
 GitHub 镜像：https://github.com/WaterXiao-git/jingliu-ai-video
+
+便携包附带 jingliu-video 文件夹，可作为独立技能安装到本地 Agent；进入技能目录运行 python scripts/jingliu.py status，或使用脚本绝对路径。wait 的失败/取消/超时退出码分别为 3/4/124。

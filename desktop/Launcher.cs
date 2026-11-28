@@ -16,7 +16,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("镜流 · AI 短剧启动中心")]
 [assembly: AssemblyVersion("0.1.5.0")]
-[assembly: AssemblyFileVersion("0.1.5.3")]
+[assembly: AssemblyFileVersion("0.1.5.4")]
 
 namespace Jingliu {
     internal static class Core {

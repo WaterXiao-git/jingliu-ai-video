@@ -107,7 +107,7 @@ def finish_job(job, project):
     if kind == 'video':
         shot = STORE.find_shot(project, job.get('shot_id', ''))
         if shot is not None:
-            relative = f'versions/{uuid.uuid4().hex[:10]}.mp4'
+            relative = f'renders/{uuid.uuid4().hex[:10]}.mp4'
             project['files'][relative] = b'FAKE_MP4_' + shot['id'].encode()
             if shot['clip'] and shot['clip'] not in shot['versions']:
                 shot['versions'].append(shot['clip'])
@@ -129,10 +129,10 @@ def finish_job(job, project):
                             'script': '草案剧本'}
     elif kind == 'export':
         name = uuid.uuid4().hex[:10]
-        mp4, srt = f'exports/{name}.mp4', f'exports/{name}.srt'
+        mp4, srt = f'renders/{name}.mp4', f'renders/{name}.srt'
         project['files'][mp4] = b'FAKE_EXPORT_MP4'
         project['files'][srt] = '1\n00:00:00,000 --> 00:00:04,000\n台词\n'.encode('utf-8')
-        project['exports'].append({'video': mp4, 'subtitles': srt, 'created': time.time()})
+        project['exports'].append({'id': name, 'name': 'mock export', 'file': mp4, 'subtitle': srt, 'created': time.time()})
     job.update(state='done', progress=100, message='完成')
 
 

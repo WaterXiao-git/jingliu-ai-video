@@ -15,10 +15,11 @@ description: 操作镜流（Jingliu）本地 AI 短剧工作台：硬件检查�
 
 ## 基本约定
 
+- 执行位置：仓库根目录可直接运行下列命令（有同名转发入口）；独立安装技能时，先进入包含本 SKILL.md 的技能目录，或用脚本绝对路径。无需依赖 Agent 的当前目录。
 - 所有命令：`python scripts/jingliu.py <子命令> [参数]`，成功输出 JSON，失败返回非零退出码。
 - 工作台不在默认地址时，用 `--base http://127.0.0.1:<端口>` 或环境变量 `JINGLIU_BASE`。
-- 媒体路径均为项目内相对路径（如 `assets/xxx.png`、`versions/xxx.mp4`、`exports/xxx.mp4`）。
-- 长任务（视频生成可能十几分钟）用 `wait --job-id` 轮询，进度会打印到 stderr。
+- 媒体路径均为项目内相对路径（如 `assets/xxx.png`、`renders/xxx.mp4`、`renders/xxx.srt`）。
+- 长任务用 `wait --job-id` 轮询，进度打印到 stderr。只有 `done` 且退出码 0 才能进入下一阶段；失败为 3、取消为 4、超时为 124（不会取消后台任务）。连接或请求错误为 1，参数解析错误为 2。保留并读取 stdout 的任务 JSON；不要重复排队。
 - 硬件与隐私：一切数据留在本机；不要把用户的素材、提示词、日志外传。
 
 ## 第 0 步：确认工作台可用
@@ -64,7 +65,7 @@ python scripts/jingliu.py create --name "月台机器人" --aspect 9:16   # 或 
    `draft --id <项目> --brief "故事想法或剧本" --count 5 --seconds 30` → `wait` →
    `apply-draft --id <项目>` 导入为正式分镜（同时导入建议素材与剧本）。
 2. **手动逐镜**：`shot --id <项目> --action add`（最多 60 镜），然后
-   `shot --action save --shot-id <镜头> --title ... --visual "画面描述" --prompt "动作提示词"
+   `shot --id <项目> --action save --shot-id <镜头> --title ... --visual "画面描述" --prompt "动作提示词"
    --dialogue "小机器人：信号到了！" --seconds 4 --quality quick`
 
 注意约束：`seconds` 0.5–12 秒；`quality` ∈ quick/normal/detail（首次用 quick 试拍）；
@@ -80,6 +81,7 @@ python scripts/jingliu.py asset --id <项目> --name 小机器人 --kind charact
 python scripts/jingliu.py shot --id <项目> --action save --shot-id <镜头> --first assets/xxx.png
 ```
 
+- 修改角色可只传 `--asset-id` 和要改的字段；未传字段保留原值，明确传空字符串才清除图片、提示词或声线。CLI 也兼容旧版工作台的整条覆盖接口。
 - 没有 `--first`（首帧）的镜头不能生成视频。可用 `sketch --shot-id <镜头>` 让 H3
   抽帧生成概念草图作首帧，或为无图素材 `sketch --asset-id <素材>` 生成参考图。
 - 尾帧（`--last`）可选，留空沿用首帧。固定角色造型请用确认过的参考图。

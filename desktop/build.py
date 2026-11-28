@@ -10,14 +10,15 @@ import sys
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.1.5-preview.3'
+VERSION = '0.1.5-preview.4'
+SKILL_FILES = ('SKILL.md', 'scripts/jingliu.py', 'references/api.md', 'references/clients.md', 'references/deploy.md')
 ICON_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 # Explicit distribution roots: never scoop up an installed runtime or user files.
 INCLUDE = ('deploy', 'deploy/vendor', 'deploy/acceptance_guard', 'studio/web', 'studio/demo', 'workflows', 'scripts')
 EXTENSIONS = {'.py', '.ps1', '.yaml', '.txt', '.json', '.js', '.css', '.html', '.png', '.zip', '.modelfile'}
 FILES = ('studio/studio.py', 'studio/engine.py', 'studio/local_speech.ps1', 'README.md',
          'LICENSE', 'NOTICE.md', 'docs/assets/jingliu-logo.png', 'docs/installation.md',
-         'docs/startup.md', 'docs/desktop.md', 'docs/MINIMAX-H3-LICENSE.txt', '打开镜流.cmd')
+         'docs/startup.md', 'docs/desktop.md', 'docs/MINIMAX-H3-LICENSE.txt', '打开镜流.cmd') + tuple('.agents/skills/jingliu-video/' + name for name in SKILL_FILES)
 
 
 def payload_files(root=ROOT):
@@ -115,15 +116,24 @@ def main():
     instructions = (ROOT / 'desktop/README-Windows.txt').read_text(encoding='utf-8')
     (output / 'README-Windows.txt').write_text(instructions, encoding='utf-8-sig')
     bundle = output / ('Jingliu-Windows-x64-' + VERSION + '.zip')
+    skill_bundle = output / ('Jingliu-Agent-Skill-' + VERSION + '.zip')
+    skill_root = ROOT / '.agents/skills/jingliu-video'
+    with ZipFile(skill_bundle, 'w', compression=ZIP_DEFLATED) as archive:
+        for name in SKILL_FILES:
+            archive.write(skill_root / name, 'jingliu-video/' + name)
     with ZipFile(bundle, 'w', compression=ZIP_DEFLATED) as archive:
         for name in ('Jingliu.exe', 'Jingliu.exe.sha256', 'README-Windows.txt'):
             archive.write(output / name, name)
+        for name in SKILL_FILES:
+            archive.write(skill_root / name, 'jingliu-video/' + name)
     bundle_hash = hashlib.sha256(bundle.read_bytes()).hexdigest()
-    (output / 'SHA256SUMS.txt').write_text(f'{checksum}  Jingliu.exe\n{bundle_hash}  {bundle.name}\n', encoding='ascii')
+    skill_hash = hashlib.sha256(skill_bundle.read_bytes()).hexdigest()
+    (output / 'SHA256SUMS.txt').write_text(f'{checksum}  Jingliu.exe\n{bundle_hash}  {bundle.name}\n{skill_hash}  {skill_bundle.name}\n', encoding='ascii')
     commit, dirty = source_state()
     result = {'version': VERSION, 'file': executable.name, 'bytes': executable.stat().st_size,
               'sha256': checksum, 'payload_sha256': digest, 'source_commit': commit, 'source_dirty': dirty,
-              'bundle_file': bundle.name, 'bundle_bytes': bundle.stat().st_size, 'bundle_sha256': bundle_hash}
+              'bundle_file': bundle.name, 'bundle_bytes': bundle.stat().st_size, 'bundle_sha256': bundle_hash,
+              'skill_file': skill_bundle.name, 'skill_sha256': skill_hash}
     (output / 'build-info.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
     print(json.dumps(result, indent=2))
 

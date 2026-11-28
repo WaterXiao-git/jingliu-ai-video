@@ -8,6 +8,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -45,6 +46,10 @@ class CliTestBase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.mock.terminate()
+        cls.mock.wait(timeout=10)
+        cls.mock.stdout.close()
+        cls.mock.stderr.close()
+        shutil.rmtree(cls.tmp)
 
     def run_cli(self, *args, expect=0, **flags):
         extra = []
@@ -77,7 +82,12 @@ class CliTestBase(unittest.TestCase):
     def wait_job(self, job_id, timeout=30):
         deadline = time.time() + timeout
         while time.time() < deadline:
-            job = self.run_cli('wait', '--job-id', job_id, '--interval', '1')
+            response = subprocess.run([sys.executable, str(SCRIPT), 'wait', '--job-id', job_id,
+                                       '--interval', '1', '--timeout', str(timeout), '--base', self.base],
+                                      capture_output=True, text=True, encoding='utf-8', timeout=timeout + 10)
+            self.assertIn(response.returncode, (0, 3, 4), response.stderr)
+            job = json.loads(response.stdout)
+            self.assertEqual(response.returncode, {'done': 0, 'failed': 3, 'cancelled': 4}[job['state']])
             if job.get('state') in ('done', 'failed', 'cancelled'):
                 return job
         self.fail('等待任务超时')
@@ -151,6 +161,9 @@ class TestAssets(CliTestBase):
         # 修改素材
         out = self.run_cli('asset', '--id', pid, '--asset-id', asset['id'], '--name', '机器人一号', '--kind', 'character')
         self.assertEqual(out['assets'][0]['name'], '机器人一号')
+        self.assertEqual(out['assets'][0]['image'], upload['file'])
+        self.assertEqual(out['assets'][0]['prompt'], '圆头机器人')
+        self.assertEqual(out['assets'][0]['voice'], 'local-zh-female')
         # 删除素材
         out = self.run_cli('asset', '--id', pid, '--asset-id', asset['id'], '--remove')
         self.assertFalse(out['assets'])
@@ -204,6 +217,18 @@ class TestShots(CliTestBase):
 
 
 class TestJobs(CliTestBase):
+    def test_wait_timeout_and_invalid_interval(self):
+        pid = self.make_project()['id']
+        uploaded = self.run_cli('upload', '--id', pid, '--file', str(self.png))
+        sid = self.add_shot(pid, title='HOLD timeout', first=uploaded['file'])
+        job = self.run_cli('video', '--id', pid, '--shot-id', sid)[0]
+        response = self.run_cli('wait', '--job-id', job['id'], '--timeout', '0', expect=1)
+        self.assertEqual(response.returncode, 124)
+        self.assertTrue(json.loads(response.stdout)['timeout'])
+        response = self.run_cli('wait', '--job-id', job['id'], '--interval', '0', expect=1)
+        self.assertNotIn('Traceback', response.stderr)
+        self.run_cli('cancel', '--job-id', job['id'])
+
     def test_video_requires_first_frame(self):
         pid = self.make_project()['id']
         shot_id = self.add_shot(pid)
@@ -228,7 +253,7 @@ class TestJobs(CliTestBase):
         self.assertEqual(job['state'], 'done')
         detail = self.run_cli('project', '--id', pid)
         clip = detail['shots'][0]['clip']
-        self.assertTrue(clip.startswith('versions/'))
+        self.assertTrue(clip.startswith('renders/'))
         # 重生成本镜头会把旧 clip 归档到 versions
         jobs2 = self.run_cli('video', '--id', pid, '--shot-id', shot_id)
         self.wait_job(jobs2[0]['id'])
@@ -293,9 +318,9 @@ class TestJobs(CliTestBase):
         export = detail['exports'][-1]
         out_mp4 = Path(self.tmp) / '成片.mp4'
         out_srt = Path(self.tmp) / '字幕.srt'
-        self.run_cli('download', '--id', pid, '--path', export['video'], '--out', str(out_mp4))
+        self.run_cli('download', '--id', pid, '--path', export['file'], '--out', str(out_mp4))
         self.assertEqual(out_mp4.read_bytes(), b'FAKE_EXPORT_MP4')
-        self.run_cli('download', '--id', pid, '--path', export['subtitles'], '--out', str(out_srt))
+        self.run_cli('download', '--id', pid, '--path', export['subtitle'], '--out', str(out_srt))
         self.assertIn('台词', out_srt.read_text(encoding='utf-8'))
 
     def test_export_invalid_options(self):

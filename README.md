@@ -72,7 +72,7 @@ Python 3.11.9 使用华为云镜像中的官方 NuGet 免安装包，普通 Pyth
 
 ### Windows EXE（预览版）
 
-希望少接触命令行时，可从 [Gitee 国内下载页](https://gitee.com/xiao-ming-jun/jingliu-ai-video/releases/tag/v0.1.5-preview.3) 下载 **Jingliu.exe**，或下载便携 ZIP 解压后使用；另有 [GitHub 下载镜像](https://github.com/WaterXiao-git/jingliu-ai-video/releases/tag/v0.1.5-preview.3)。单文件约 16 MB，包含工作台与部署程序，双击即可，无需预先安装 Git 或 Node.js。程序自动寻找已有部署；新电脑会自动选择空间充足的磁盘和空闲工作台端口，检测配置并准备计划。阅读许可、确认实际地区和预算后，点“一键安装并打开”。技术参数放在可选的“高级设置”中。
+希望少接触命令行时，可从 [Gitee 国内下载页](https://gitee.com/xiao-ming-jun/jingliu-ai-video/releases/tag/v0.1.5-preview.4) 下载 **Jingliu.exe**，或下载便携 ZIP 解压后使用；另有 [GitHub 下载镜像](https://github.com/WaterXiao-git/jingliu-ai-video/releases/tag/v0.1.5-preview.4)。单文件约 16 MB，包含工作台与部署程序，双击即可，无需预先安装 Git 或 Node.js。程序自动寻找已有部署；新电脑会自动选择空间充足的磁盘和空闲工作台端口，检测配置并准备计划。阅读许可、确认实际地区和预算后，点“一键安装并打开”。技术参数放在可选的“高级设置”中。
 
 此 EXE 面向 Windows 10 / 11 x64，使用系统 .NET Framework 4.8 或更新的 4.x；视频生成仍需满足上面的显卡和内存要求。模型继续从清单中的国内来源下载，不包含在 EXE 中。已部署后再次双击，可自动打开上次使用的工作台。[EXE 使用说明、验证范围与构建方法](docs/desktop.md)
 
@@ -238,7 +238,7 @@ Subtle body movement, soft blue ambient light, consistent character appearance.
 
 ### 交给 Agent 日常操作（部署完成后）
 
-[jingliu-video Skill](.agents/skills/jingliu-video/SKILL.md) 覆盖部署后的创作全流程：创建项目、上传角色参考图、编写分镜、排队生成镜头、等待任务、配音导出与下载成片。技能自带 `scripts/jingliu.py` CLI（纯标准库），任何具备本机终端与 Python 3 的 harness（WorkBuddy、Codex、zcode 等）均可接入，接入方式见其 [references/clients.md](.agents/skills/jingliu-video/references/clients.md)。配套 API 契约测试位于 `tests/test_jingliu_cli.py`（离线 mock，不依赖真实工作台）。
+[jingliu-video Skill](.agents/skills/jingliu-video/SKILL.md) 覆盖部署后的创作全流程：创建项目、上传角色参考图、编写分镜、排队生成镜头、等待任务、配音导出与下载成片。技能自带 `scripts/jingliu.py` CLI（纯标准库），任何具备本机终端与 Python 3 的 harness（WorkBuddy、Codex、zcode 等）均可接入，接入方式见其 [references/clients.md](.agents/skills/jingliu-video/references/clients.md)。仓库根目录可直接运行 `python scripts/jingliu.py status`；独立技能包则先进入技能目录或使用绝对路径。发布页提供独立技能 ZIP，便携包也附带技能目录。修改角色保留未传字段；`wait` 用 0/3/4/124 分别表示完成/失败/取消/超时。配套 API 契约测试位于 `tests/test_jingliu_cli.py`（离线 mock，不依赖真实工作台）。
 
 <details>
 <summary><strong>开发者与 Agent 常用命令</strong></summary>

@@ -374,8 +374,11 @@ def api(studio):
             require(item is not None, '素材不存在。', 404)
             project['assets'].remove(item)
         else:
-            name, kind, image = string(body.get('name'), 100), body.get('kind'), body.get('image') or ''
-            voice = body.get('voice') or ''
+            previous = item or {}
+            name = string(body.get('name', previous.get('name')), 100)
+            kind = body.get('kind', previous.get('kind'))
+            image = body.get('image', previous.get('image')) or ''
+            voice = body.get('voice', previous.get('voice')) or ''
             require(name and kind in ('character', 'scene', 'prop'), '请填写素材名称和类型。')
             require(not voice or voice in engine.VOICES, '所选声线不受支持。')
             if image:
@@ -383,7 +386,7 @@ def api(studio):
             if item is None:
                 item = {'id': uid()}
                 project['assets'].append(item)
-            item.update(name=name, kind=kind, image=image, prompt=string(body.get('prompt')), voice=voice)
+            item.update(name=name, kind=kind, image=image, prompt=string(body.get('prompt', previous.get('prompt'))), voice=voice)
         studio.save(project)
         return web.json_response(project)
 

@@ -15,7 +15,9 @@
 import argparse
 import json
 import os
+import shutil
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -58,9 +60,9 @@ def request(method, path, body=None, raw=None, headers=None, timeout=30, base=DE
         except (ValueError, AttributeError):
             pass
         raise ApiError(f"HTTP {error.code} · {detail[:500]}") from error
-    except urllib.error.URLError as error:
+    except (urllib.error.URLError, OSError) as error:
         raise ApiError(
-            f"无法连接工作台 {url}（{error.reason}）。"
+            f"无法连接工作台 {url}（{getattr(error, 'reason', str(error))}）。"
             "请确认镜流已启动：运行 python -B deploy/installer.py start，或双击「打开镜流」。"
         ) from error
     if not text:
@@ -99,16 +101,29 @@ def download_media(project_id, relative, out, base=DEFAULT_BASE):
     if len(parts) != 2:
         raise ApiError(f"媒体路径须形如 category/name，例如 exports/xxx.mp4，收到：{relative}")
     url = f"{base.rstrip('/')}/media/{project_id}/{parts[0]}/{parts[1]}?download=1"
+    destination = Path(out).resolve()
+    temporary = None
     try:
-        with urllib.request.urlopen(url, timeout=600) as resp, open(out, "wb") as fh:
-            fh.write(resp.read())
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(url, timeout=600) as resp:
+            with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.jingliu-', delete=False) as fh:
+                temporary = Path(fh.name)
+                shutil.copyfileobj(resp, fh, 1024 * 1024)
+            os.replace(temporary, destination)
     except urllib.error.HTTPError as error:
         raise ApiError(f"HTTP {error.code} · 媒体不存在或路径无效：{relative}") from error
+    except (OSError, urllib.error.URLError) as error:
+        raise ApiError(f"下载失败：{error}") from error
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
     return {"out": str(Path(out).resolve()), "size": Path(out).stat().st_size, "path": relative}
 
 
 def wait_job(job_id, timeout_s=7200, interval=5, base=DEFAULT_BASE):
-    deadline = time.time() + timeout_s
+    if timeout_s < 0 or interval <= 0:
+        raise ApiError('timeout 必须大于等于 0，interval 必须大于 0')
+    deadline = time.monotonic() + timeout_s
     job = None
     while True:
         jobs = request("GET", "/api/jobs", base=base)
@@ -117,13 +132,13 @@ def wait_job(job_id, timeout_s=7200, interval=5, base=DEFAULT_BASE):
             raise ApiError(f"任务不存在：{job_id}")
         if job.get("state") in TERMINAL_STATES:
             return job
-        if time.time() > deadline:
+        if time.monotonic() >= deadline:
             return {"state": job.get("state"), "timeout": True,
                     "message": f"等待超时（{timeout_s}s），任务仍在 {job.get('state')}", "job": job}
         progress = job.get("progress")
         message = job.get("message", "")
         print(f"[等待] {job.get('state')} {('%d%%' % progress) if isinstance(progress, (int, float)) else ''} {message}".rstrip(), file=sys.stderr)
-        time.sleep(interval)
+        time.sleep(min(interval, max(0, deadline - time.monotonic())))
 
 
 # ---------------------------------------------------------------- argparse
@@ -258,6 +273,12 @@ def main():
         print(f"错误：{error}", file=sys.stderr)
         sys.exit(1)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.command == 'wait':
+        code = 124 if result.get('timeout') else {'done': 0, 'failed': 3, 'cancelled': 4}.get(result.get('state'), 1)
+        if code:
+            print(f"任务未成功：{result.get('message') or result.get('state')}", file=sys.stderr)
+        return code
+    return 0
 
 
 def dispatch(args, base):
@@ -285,6 +306,13 @@ def dispatch(args, base):
         body = {}
         if args.asset_id:
             body["id"] = args.asset_id
+            if not args.remove:
+                project = request('GET', f'/api/projects/{args.id}', base=base)
+                existing = next((a for a in project['assets'] if a['id'] == args.asset_id), None)
+                if existing is None:
+                    raise ApiError('素材不存在。')
+                # Older deployed servers replace the entire asset on POST.
+                body.update({key: existing.get(key, '') for key in ('name', 'kind', 'image', 'prompt', 'voice')})
         if args.remove:
             body["remove"] = True
         for field in ("name", "kind", "image", "prompt", "voice"):
@@ -345,4 +373,4 @@ def dispatch(args, base):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
